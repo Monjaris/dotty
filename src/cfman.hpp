@@ -1,103 +1,5 @@
 #pragma once
-#include "core.h"
-
-
-struct Profile;
-
-struct Cfman
-{
-    std::vector<const Profile*> profiles;
-
-    const fs::path HOME = cm::userHomePath(true, "$HOME is empty");
-    fs::path config_d = "~/.config/dotty";
-    fs::path storage_d = "~/.local/share/dotty";
-
-    const char* master_config = "dotty.toml";
-    const char* config_source_name = "config";
-    const char* default_profile = "main";
-    const char* current_profile = default_profile;
-
-    using SrcDest = struct{ fs::path src, path; };
-    std::vector<SrcDest> path_pairs = {};
-
-    enum class Res : uint8_t {
-        OK=0,
-        ERR=1,
-        FileCouldNotBeOpened,
-        DirectoryCouldNotBeCreated,
-        ProfileDoesNotExist,
-        ProfileAlreadyExists,
-        ProfileAlreadySet,
-    };
-
-    // Get current profile as string
-    [[gnu::pure]]
-    std::string currentProfile() {
-        std::string current = current_profile;
-        return current;
-    }
-
-    // Create a folder and register a new profile
-    Res newProfile(const std::string& name) {
-        if (fs::exists(config_d/name)) return Res::ProfileAlreadyExists;
-        if (fs::create_directory(config_d/name)) {
-            ;
-            if (cm::newFile(config_d/name/"config")) {
-                ;
-            } else return Res::FileCouldNotBeOpened;
-        } else return Res::DirectoryCouldNotBeCreated;
-        return Res::OK;
-    }
-
-    // Set current dotty profile
-    Res setProfile(const std::string& name) {
-        if (!fs::exists(config_d/name)) return Res::ProfileDoesNotExist;
-        if (default_profile == name) return Res::ProfileAlreadySet;
-        default_profile = name.data();
-        return Res::OK;
-    }
-
-    // Copy all source files to destination files, pairs defined by a member
-    void write() {
-        for (auto [src, dest] : path_pairs) {
-            if (dest.is_absolute()) {
-                cm::print(
-                    "Config-Manager: Write: Error: destination should be relative path!\n"
-                ); continue;
-            }
-            fs::copy_file(
-                cm::parsePathTilde(src),
-                cm::parsePathTilde(storage_d/currentProfile())/dest,
-                fs::copy_options::update_existing
-            );
-        }
-    }
-};
-
-extern Cfman dotty;
-
-
-
-struct Profile {
-    std::string name;
-    std::string github_account;
-    std::string repo_url;
-
-    Profile(
-        const std::string& name, const std::string& github_account,
-        const std::string repo_url
-    ) : name(name), github_account(github_account), repo_url(repo_url)
-    {
-        dotty.profiles.push_back(this);
-    }
-
-    fs::path get_dir() {
-        return dotty.config_d/name;
-    }
-    fs::path get_config_path() {
-        return get_dir()/dotty.config_source_name;
-    }
-};
+#include "profile.hpp"
 
 
 
@@ -198,60 +100,13 @@ struct Lexer {
 };
 
 
-
-
-struct ConfigParser {
-    std::vector<Token> tokens;
-    uint32 idx;
-    std::vector<Cfman::SrcDest> path_pairs;
-
-    Token get() { return tokens[idx]; }
-    bool checks() { return tokens.size() > idx; }
-    void advance() { if (checks()) ++idx; }
-
-    void parseMain()
-    {
-        idx = 0;
-
-        while(checks())
-        {
-            if (get().type == Token::STRING) {
-                std::string src = get().name;
-
-                advance();
-                if (get().type == Token::REDIRECTOR) {
-                    ;
-                    advance();
-                    if (get().type == Token::STRING) {
-                        std::string dest = get().name;
-
-                        path_pairs.emplace_back(Cfman::SrcDest{src, dest});
-                    }
-                    else cm::terminate("After a REDIRECTOR token next token.type should be STRING\n");
-                }
-                else cm::terminate("After a STRING token next token.type should be REDIRECTOR\n");
-            }
-            else cm::terminate("First token.type should be STRING\n");
-
-            advance();
-        }
-    }
-
-    auto result() {
-        return path_pairs;
-    }
-};
-
-
-
-
 struct MasterConfigParser {
     std::vector<Token> tokens;
     uint32 idx;
     std::map<std::string, std::string> table;
     // distributions of table
     std::map<std::string, std::string> vars;
-    std::vector<std::string> profiles;
+    std::vector<Profile> profiles;
 
 // builds property cstring
 #define PROP(obj, prop) cm::concats(obj, prop)
@@ -302,20 +157,21 @@ struct MasterConfigParser {
         for (const auto& [first, second]  : table)
         {
             std::string key = first;
+            Profile profile("[no-name]", "[no-github-acc]", "[no-repo-url]");
 
             if (cm::prefix_strip(key, PROFILE, &key)) {
                 if (cm::prefix_strip(key, PROFILE_ADD, &key)) {
-                    profiles.emplace_back(second);
+                    profile.name = second;
+                    profiles.emplace_back(profile);
                 }
                 else if (cm::prefix_strip(key, PROFILE_ACTIVE, &key)) {
                     vars[PROP(PROFILE, PROFILE_ACTIVE)] = second;
-                    dotty.setProfile(vars[PROP(PROFILE, PROFILE_ACTIVE)]);
                 }
             }
             else if (cm::prefix_strip(key, MENTION, &key)) {
-                if (!cm::vec_contains(profiles, key)) {
-                    cm::print("Master-Config: Profile does not exist: ", key);
-                }
+                // if (!cm::vec_contains(profiles, key)) {
+                    // cm::print("Master-Config: Profile does not exist: ", key);
+                // }
                 const char* mentioned_profile = key.data();
                 if (cm::prefix_strip(key, "gh-acc", &key)) {
                     vars[PROP(mentioned_profile, MENTION_GH_ACC)] = second;
@@ -329,6 +185,222 @@ struct MasterConfigParser {
                 cm::print("Master-Config: Eval-Error: Invalid tokens: '", first,"', '",second, "'\n");
             }
         }
+    }
+
+    void printReadProfiles() {
+        for (uint32 i=0;  i < profiles.size();  ++i) {
+            auto prof = profiles[i];
+            cm::print("1. ", prof.name, "\n");
+        }
+    }
+
+    bool unwrap() {
+        bool result = true;
+
+        for (uint32 i=0;  i < profiles.size();  ++i) {
+            auto& prof = profiles[i];
+            for (uint32 j=1;  j < profiles.size();  ++j) {
+                if (prof.name == profiles[j].name) {
+                    result = false;
+                    cm::print("Duplicate profile declaration: ", prof.name ,"\n");
+                }
+            }
+        }
+
+        return result;
+    }
+};
+
+
+
+
+
+
+struct Cfman
+{
+    std::vector<Profile> profiles;
+
+    const fs::path HOME = cm::userHomePath(true, "$HOME is empty");
+    fs::path config_d = HOME/".config/dotty";
+    fs::path storage_d = HOME/".local/share/dotty";
+
+    const char* master_config = ".dotty";
+    const char* config_source_name = "config";
+    std::optional<std::string> current_profile = std::nullopt;
+
+    using SrcDest = struct{ fs::path src, path; };
+    std::vector<SrcDest> path_pairs = {};
+
+    enum class Res : uint8_t {
+        OK=0,
+        ERR=1,
+        FileCouldNotBeOpened=2,
+        DirectoryCouldNotBeCreated=3,
+        ProfileDoesNotExist=4,
+        ProfileAlreadyExists=5,
+        ProfileAlreadySet=6,
+    };
+
+
+    // Get current profile as string
+    std::string currentProfile() {
+        static COMPTIME_STR NO_PROFILE = "[no-profile]";
+        if (!current_profile.has_value()) {
+            return "[no-profile]";
+        }
+        std::string current = current_profile.value();
+        return current;
+    }
+
+
+    // Create a folder and register a new profile
+    Res newProfile(
+        const std::string& name, const std::string& repo_name,
+        const std::string& repo_visibility
+    ){
+        // quick returns
+        if (fs::exists(config_d/name)) return Res::ProfileAlreadyExists;
+        if (fs::create_directories(config_d/name)) {
+            ;
+            if (cm::newFile(config_d/name/"config")) {
+                ;
+            } else return Res::FileCouldNotBeOpened;
+        } else return Res::DirectoryCouldNotBeCreated;
+
+        // constants
+        const fs::path repo_d = cm::parsePathTilde(storage_d/name);
+        const fs::path config = cm::parsePathTilde(config_d/name);
+
+        cm::CmdStream cmd;
+        cmd
+            .add("mkdir -p {}", repo_d.string())
+            .add("cd {}", repo_d.string())
+            .add("git init")
+            .add("touch .gitkeep")
+            .add("git add .gitkeep")
+            .add("git commit -m 'Dotty profile repository: Initial commit'")
+            .add("gh repo create {} --{} --source={} --remote=origin --push",
+                repo_name, repo_visibility, repo_d.string());
+        cmd.run(" && ");
+
+        return Res::OK;
+    }
+
+
+    // Set current dotty profile
+    Res setProfile(const std::string& name) {
+        if (!fs::exists(config_d/name)) return Res::ProfileDoesNotExist;
+        if (current_profile == name.data()) return Res::ProfileAlreadySet;
+        current_profile = name.data();
+        return Res::OK;
+    }
+
+
+    Res listProfiles(const std::string&& fields="name,repo,url") {
+        bool fname, frepo, furl = false;
+        if (fields.contains("name")) fname = true;
+        if (fields.contains("url")) frepo = true;
+        if (fields.contains("repo")) furl = true;
+
+        for (uint32 i=0;  i < profiles.size();  ++i) {
+            auto prof = profiles[i];
+            std::string msg;
+            if(fname) msg += prof.name;
+            cm::print(i, ": ", prof.name, "\n");
+        }
+        return Res::OK;
+    }
+
+
+
+    void load() {
+        cm::debug("Loading dotty...\n");
+        fs::path master_path = cm::parsePathTilde(HOME/master_config);
+        if (!fs::exists(master_path)) return;
+
+        cm::debug("Opening master config\n");
+        std::ifstream master(cm::parsePathTilde(master_config));
+        Lexer lexer;
+        MasterConfigParser mcparser;
+        while (std::getline(master, lexer.line)) {
+            lexer.lexMain();
+            for (auto& token :  lexer.result()) {
+                mcparser.tokens.push_back(token);
+            }
+        }
+        mcparser.eval();
+        mcparser.printReadProfiles();
+        if( !mcparser.unwrap() ) cm::print("Master-Config-Parser: Unwrap: Something wrong happened\n");
+
+        profiles = mcparser.profiles;
+
+        // set active profile based on the config
+        auto it = mcparser.vars.find("profile.active");
+        setProfile((it!=mcparser.vars.end())? (it->second) : (cm::terminate("Error: setProfile()"),""));
+
+        cm::print("Loaded dotty.\n\n");
+    }
+
+
+    // Copy all source files to destination files, pairs defined by a member
+    void write() {
+        for (auto [src, dest] : path_pairs) {
+            if (dest.is_absolute()) {
+                cm::print(
+                    "Config-Manager: Write: Error: destination should be relative path!\n"
+                ); continue;
+            }
+            fs::copy_file(
+                cm::parsePathTilde(src),
+                cm::parsePathTilde(storage_d/currentProfile())/dest,
+                fs::copy_options::update_existing
+            );
+        }
+    }
+};
+
+extern Cfman dotty;
+
+
+struct ConfigParser {
+    std::vector<Token> tokens;
+    uint32 idx;
+    std::vector<Cfman::SrcDest> path_pairs;
+
+    Token get() { return tokens[idx]; }
+    bool checks() { return tokens.size() > idx; }
+    void advance() { if (checks()) ++idx; }
+
+    void parseMain()
+    {
+        idx = 0;
+
+        while(checks())
+        {
+            if (get().type == Token::STRING) {
+                std::string src = get().name;
+
+                advance();
+                if (get().type == Token::REDIRECTOR) {
+                    ;
+                    advance();
+                    if (get().type == Token::STRING) {
+                        std::string dest = get().name;
+
+                        path_pairs.emplace_back(Cfman::SrcDest{src, dest});
+                    }
+                    else cm::terminate("After a REDIRECTOR token next token.type should be STRING\n");
+                }
+                else cm::terminate("After a STRING token next token.type should be REDIRECTOR\n");
+            }
+            else cm::terminate("First token.type should be STRING\n");
+
+            advance();
+        }
+    }
+
+    auto result() {
+        return path_pairs;
     }
 };
 

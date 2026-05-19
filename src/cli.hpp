@@ -10,7 +10,8 @@ struct CmdLine
     CmdLine (int argc, char** argv);
     ~CmdLine ();
 
-    int32 do_init();
+    int32 do_list();
+    int32 do_init(const char* ini_profile);
     int32 do_write();
     int32 do_update(const char* commit_message);
     int32 do_install();

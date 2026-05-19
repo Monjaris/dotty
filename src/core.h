@@ -22,10 +22,11 @@ struct CmdStream {
         commands.clear();
     }
 
-    int32 run(const char* seperator) {
-        std::string line = {};
-        for (uint32 i=0;  i < commands.size();  ++i) {
-            line = commands[i] += ((i!=commands.size()-1)? seperator:"");
+    int32 run(const char* separator) {
+        std::string line;
+        for (uint32 i = 0; i < commands.size(); ++i) {
+            line += commands[i];
+            if (i != commands.size() - 1) line += separator;
         }
         return std::system(line.data());
     }
@@ -52,6 +53,13 @@ inline void print(Args&&... args) {
     if(_flush) std::flush(std::cout);
 }
 
+template <class... Args>
+void debug(Args... args) {
+    const strview pre = "[Debug] ";
+    const strview post = "\n";
+    cm::print(pre, std::forward<Args>(args)..., post);
+}
+
 // terminate the application
 template <int _errc=1, class... Args>
 [[noreturn]] inline void terminate(Args&&... args) {
@@ -64,7 +72,7 @@ template <int _errc=1, class... Args>
 template <class T>
 bool is_any_of(const T val, std::initializer_list<T> list) {
     for (auto item : list) {
-        if (val == list) {
+        if (val == item) {
             return true;
         }
     }
@@ -87,16 +95,16 @@ inline bool prefix_strip(const std::string& str, const std::string& prefix, std:
 }
 
 // create a new file in the file system
-inline bool newFile(fs::path path) {
-    std::fstream new_file(path);
-    if (!new_file) return false;
-    return true;
+inline bool newFile(const fs::path& path) {
+    if (fs::exists(path)) return false;
+    std::ofstream file(path);
+    return file.good();
 }
 
-//
+// load $HOME to static constant once and return it
 inline const char* userHomePath(bool terminate_on_fail = false, const char* fail_msg="") {
     static const char* home_path = getenv("HOME");
-    if (home_path == NULL) {
+    if (home_path == nullptr) {
         if (terminate_on_fail) terminate(fail_msg);
         else return nullptr;
     }
@@ -104,7 +112,7 @@ inline const char* userHomePath(bool terminate_on_fail = false, const char* fail
 }
 
 // parse file path by converting tilde('~') to $HOME variable
-inline fs::path parsePathTilde(std::string path) {
+constexpr inline fs::path parsePathTilde(std::string path) {
     if (!(path[0] == '~')) return path;
     path.erase(0, 1);
     const char* user_home = userHomePath(true, "User does not have $HOME set");

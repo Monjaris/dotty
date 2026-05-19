@@ -42,7 +42,9 @@ Before building and using `dotty`, ensure you have the following installed:
    xmake install
    ```
 
+
 ## Usage
+
 
 ### 1. Initialization
 
@@ -58,6 +60,7 @@ This command will:
 - Initialize a local git repository in `~/.local/share/dotty/<profile>`.
 - Create a corresponding repository on GitHub and push the initial commit.
 
+
 ### 2. Configuration
 
 `dotty` looks for configuration in `~/.config/dotty/<profile>/config`. 
@@ -67,11 +70,13 @@ The configuration file uses a simple mapping syntax:
 "/path/to/source/file" >> "relative/path/in/storage"
 ```
 
+
 Example:
 ```
 "~/.zshrc" >> "zsh/zshrc"
 "~/.config/nvim/init.lua" >> "nvim/init.lua"
 ```
+
 
 ### 3. Synchronizing (Writing)
 
@@ -81,19 +86,24 @@ To copy your local files into the `dotty` storage:
 dotty write
 ```
 
+
 This will parse your config file and update the files in `~/.local/share/dotty/<profile>` based on the mappings.
 
+
 ## Development Conventions
+
 
 ### Header Files
 - `*.hpp`: Headers that have (or are planned to have) implementation in a corresponding `*.cpp`.
 - `*.h`: Headers that do not need a separate implementation file (templates, inline functions, constants, etc.).
+
 
 ### Symbols & Tokens
 - **Variables/Constants/Members**: `snake_case`
 - **Functions/Methods**: `camelCase`
 - **Classes/Typedefs**: `PascalCase`
 - **Macros / Constexprs**: `UPPER_SNAKE_CASE`
+
 
 ## Project Structure
 
@@ -103,6 +113,7 @@ This will parse your config file and update the files in `~/.local/share/dotty/<
 - `src/core.h`: Common utility functions and stream wrappers.
 - `src/common.h`: Global definitions, types, and includes.
 
+
 ## License
 
-GPLv2 -the soverign standart
+GPLv2

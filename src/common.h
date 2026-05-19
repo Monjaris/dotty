@@ -18,3 +18,4 @@ using usize = size_t;
 using int64 = int64_t;
 using strview = std::string_view;
 namespace fs = std::filesystem;
+using namespace std::string_literals;

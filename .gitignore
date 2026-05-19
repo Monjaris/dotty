@@ -9,5 +9,7 @@ compile_commands.json
 .DS_Store
 
 # REST
+dotty
+master-config.dotty
 .src
 .dest
