@@ -36,21 +36,29 @@ int32 CmdLine::do_init(const char* const ini_prof) {
     // Check github authentication status
     cm::print("Checking GitHub CLI authentication...\n");
     int auth_status = std::system("gh auth status --hostname github.com > /dev/null 2>&1");
-    if (auth_status != 0) {
+    if (FAILED auth_status) {
         cm::terminate("gh is not authenticated. Please run 'gh auth login' first.\n");
     }
     cm::print("GitHub CLI authenticated.\n\n");
 
+    // Get github authenticated username
+    cm::CmdStream gh_handle;
+    gh_handle.add("gh api user --jq '.login'");
+    if (FAILED gh_handle.run(" && ", true)) cm::terminate("Fetching github username failed!");
+    const std::string& gh_auth_name = gh_handle.output();
+
     // Prompts for making the repo
     std::string repo_name;
-    cm::print("Enter a name for your dotty config repo: ");
-    cm::prompt(repo_name);
+    cm::prompt("Enter a name for your dotty config repo: ", repo_name);
 
     if (repo_name.empty()) cm::terminate("Repo name cannot be empty.\n");
+    const std::string repo_url = {
+        std::string("https://github.com/")+gh_auth_name+"/"+repo_name  // SSO probably saves us
+    };
+    cm::debug("URL constructed: ", repo_url);
 
     std::string visibility;
-    cm::print("Repo visibility — enter 'public' or 'private' [private]: ");
-    cm::prompt(visibility);
+    cm::prompt("Repo visibility — enter 'public' or 'private' [private]: ", visibility);
     cm::print("\n");
     if (visibility.empty()) visibility = "private";
     if (!cm::is_any_of(visibility, {"private"s, "public"s})) {
@@ -68,9 +76,11 @@ int32 CmdLine::do_init(const char* const ini_prof) {
     // Write master config
     std::ofstream master(cm::parsePathTilde(dotty.HOME/dotty.master_config), std::ios::app);
     master << "profile.add = \"" << ini_prof << "\"\n";
-    master << "profile.active = " << ini_prof << "\n";
+    master << "profile.active = \"" << ini_prof << "\"\n";
+    master << "@" << ini_prof << " = " << gh_auth_name << "\n";
+    master << "@" << ini_prof << " = " << repo_url << "\n";
     master << "\n"; master.close();
-
+    // load recently written config, set things up
     dotty.load();
 
     cm::print("Repo '", repo_name, "' created as ", visibility, " on GitHub.\n");
@@ -112,7 +122,7 @@ int32 CmdLine::do_update(const char* commit_message) {
         .add("git commit {}", commit_message)
         .add("git push")
     ;
-    cmd.run(" && ");
+    cmd.run(" && ", false);
 
     return EXIT_SUCCESS;
 }
@@ -122,7 +132,7 @@ int32 CmdLine::do_install() {
     cmd
         .add("")
     ;
-    cmd.run("; ");
+    cmd.run("; ", false);
 
     return EXIT_SUCCESS;
 }
