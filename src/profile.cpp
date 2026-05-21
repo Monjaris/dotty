@@ -6,7 +6,7 @@ Profile::Profile(
     const std::string& repo_url
 ) : name(name), github_account(github_account), repo_url(repo_url)
 {
-    dotty.profiles.push_back(*this);
+    ;
 }
 
 fs::path Profile::get_dir() const {

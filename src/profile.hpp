@@ -1,6 +1,8 @@
 #pragma once
 #include "core.h"
 
+struct SrcDest { fs::path src, path; };
+
 struct Profile {
     std::string name;
     std::string github_account;
