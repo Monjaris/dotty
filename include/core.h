@@ -1,18 +1,25 @@
 #pragma once
 #include "common.h"
 
-#define PRINT_ENABLED (true)
-#define DEBUG_ENABLED (true)
+#ifndef DEBUG_ON
+#define DEBUG_ON (true)
+#endif
+
+#ifndef PRINT_ON
+#define PRINT_ON (true)
+#endif
+
 
 NAMESPACE_START(cm)
 
-class CmdStream;  // (defined below after functions)
+class CmdStream;
+struct Report;
 
 
 // print to stdout via std::ostream
 template <bool _flush=true, class... Args>
 inline void print(Args&&... args) {
-    if (!PRINT_ENABLED) return;
+    if (!PRINT_ON) return;
     (std::cout << ... << std::forward<Args>(args));
     if(_flush) std::flush(std::cout);
 }
@@ -20,7 +27,7 @@ inline void print(Args&&... args) {
 
 template <class... Args>
 void debug(Args... args) {
-    if (!DEBUG_ENABLED) return;
+    if (!DEBUG_ON) return;
     const strview pre = "[Debug] ";
     const strview post = "\n";
     cm::print(pre, std::forward<Args>(args)..., post);
@@ -50,6 +57,7 @@ inline T& prompt(const char* prompt, T& lval) {
                 lval = raw;
                 free(raw);
             }
+            cm::print("\n");
         }
         else {
             print(prompt);
@@ -109,9 +117,16 @@ inline std::pair<std::string, std::string> obj_prop(std::string str, char sep='.
     return {std::move(str), ""};
 }
 
-template <class T>
-inline bool vec_contains(std::vector<T> vector, T element) {
-    return std::find(vector.begin(), vector.end(), element) != vector.end();
+template <class Container, class Underlying>
+inline bool contains(const Container& cont, const Underlying& element) {
+    return std::find(cont.begin(), cont.end(), element) != cont.end();
+}
+
+inline bool str_has_any_of(const std::string& str, std::initializer_list<char> chars) {
+    for (char c : chars) {
+        if (str.contains(c)) return true;
+    }
+    return false;
 }
 
 // takes @str writes to @out only if @prefix is @str's prefix, else returns false
@@ -148,8 +163,92 @@ constexpr inline fs::path parsePathTilde(std::string path) {
 }
 
 
+// remove all files/subfolders inside a directory but not itself
+// return a pair of integers: .first(how many item is removed), .second(how many item it had)
+inline bool remove_directory_contents(
+    fs::path directory, std::initializer_list<const char*> exclude={}
+) {
+    std::error_code remove_result;
+
+    for (auto& item : fs::directory_iterator(directory)) {
+        if (exclude.size() && cm::contains(exclude, item.path().filename().c_str())) {
+            fs::remove_all(item, remove_result);
+        }
+    }
+    cm::debug(remove_result.message());
+    return remove_result.value();
+}
+
+// TODO: Add explanation to this function
+inline std::pair<int32, int32> remove_dir_contents_recursive(
+    fs::path directory, std::initializer_list<const char*> exclude={}
+) {
+    uint32 total_c = 0;
+    uint32 removed_c = 0;
+
+    for (auto& item : fs::directory_iterator(directory)) {
+        total_c += fs::exists(item) ? std::distance(
+            fs::recursive_directory_iterator(item),
+            fs::recursive_directory_iterator{}
+        ) + 1 : 1;
+        if (cm::contains(exclude, item.path().filename().c_str()))
+            continue;
+        std::error_code ec;
+        removed_c += fs::remove_all(item, ec);
+    }
+
+    return {removed_c, total_c};
+}
+
+
+inline bool internet_is_connected() {
+    int32 status = std::system("ping -c 1 google.com > /dev/null 2>&1");
+    if (status == 0) return true;
+    return false;
+}
+
+
 NAMESPACE_END(cm)
 
+
+
+
+// contains error message and an error code
+struct cm::Report {
+    bool err = false;
+    std::string msg = {};
+
+    static Report Good() {
+        return Report {false, ""};
+    }
+
+    template <class... FmtArgs>
+    static Report Bad(std::format_string<FmtArgs...> err_msg, FmtArgs&&... err_msg_args) {
+        return Report {true, std::format(err_msg, std::forward<FmtArgs>(err_msg_args)...)};
+    }
+
+    operator bool () const {
+        return err;
+    }
+
+    // print `msg` and return true if `errc` is bad
+    Report printOnBad(bool new_line=true) const {
+        if (bool(*this)) {
+            cm::print(msg, ((new_line)? "\n":""));
+            return Report{true};
+        }
+        return Report{false};
+    }
+
+    template <class... FmtArgs>
+    void addComplain(std::format_string<FmtArgs...> complain_msg, FmtArgs&&... complain_args) {
+        std::string complain = auto("\n") + std::format(
+            complain_msg, std::forward<FmtArgs>(complain_args)...
+        );
+        msg.append(complain);
+    }
+
+};
 
 
 
@@ -172,6 +271,7 @@ public:
         commands.clear();
     }
 
+    // provide @arg seperator to put given string between each command(;, &&, ||)
     int32 run(const char* separator, bool capture_output) {
         output_buf.clear();
 
@@ -189,7 +289,7 @@ public:
             if (pipe == nullptr) return -1;
 
             char buf[256];
-            while (fgets(buf, sizeof(buf), pipe.get()) != nullptr)
+            while (std::fgets(buf, sizeof(buf), pipe.get()) != nullptr)
             {
                 output_buf.append(buf);
             }
@@ -207,3 +307,6 @@ public:
     }
 };
 
+
+
+using cm::Report;

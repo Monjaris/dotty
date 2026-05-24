@@ -250,20 +250,17 @@ struct MasterConfigParser {
         cm::print("\n");
     }
 
-    bool unwrap() {
-        bool result = true;
-
+    Report unwrap() {
         for (uint32 i=0;  i < profiles.size();  ++i) {
             auto& prof = profiles[i];
             for (uint32 j=1;  j < profiles.size();  ++j) {
                 if (prof.name == profiles[j].name) {
-                    result = false;
-                    cm::print("Duplicate profile declaration: ", prof.name ,"\n");
+                    return Report::Bad("Duplicate profile declarations: ");
                 }
             }
         }
 
-        return result;
+        return Report::Good();
     }
 };
 

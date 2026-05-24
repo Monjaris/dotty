@@ -11,12 +11,15 @@ struct CmdLine
     ~CmdLine ();
 
     int32 do_list();
-    int32 do_init(const char* ini_profile);
+    // arg-format: "master" or "master,storage"
+    int32 do_clean(const strview);
+    int32 do_init();
+    int32 do_delete(strview);
     int32 do_write();
     int32 do_update(const char* commit_message);
     int32 do_install();
 
-    void newSubCmd(const char* name, const std::function<int32()>& fn, const char* desc);
+    CLI::App* newSubCmd(const char* name, const std::function<int32()>& fn, const char* desc);
 
     int32 setup();
     int32 run();
