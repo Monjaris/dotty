@@ -2,17 +2,19 @@
 #include "cfman.hpp"
 
 Profile::Profile(
-    const std::string& name, const std::string& github_account,
-    const std::string& repo_url
-) : name(name), github_account(github_account), repo_url(repo_url)
+    const std::string& name, const std::string& github_name,
+    const std::string& repo_name
+) : name(name), github_name(github_name), repo_name(repo_name)
 {
     ;
 }
 
-fs::path Profile::get_dir() const {
-    return dotty.config_d / name;
+std::string Profile::repoUrl() const {
+    std::string url = "https://github.com/" + github_name + "/" + repo_name;
+    return url;
 }
 
-fs::path Profile::get_config_path() const {
-    return get_dir() / dotty.config_source_name;
+fs::path Profile::getConfigPath() const {
+    return  dotty.config_d/name/dotty.config_source_name;
 }
+

@@ -1,25 +1,24 @@
 # dotty
 
-`dotty` is a lightweight, profile-based configuration (dotfile) manager written in C++23. It helps you organize your dotfiles, back them up to a central storage, and synchronize them with GitHub.
+`dotty` is a simple-to-use config and dotfiles manager with profile support, written in C++23
 
 ## Features
 
-- **Profile Management**: Support for multiple configuration profiles (e.g., `main`, `work`, `minimal`).
-- **GitHub Integration**: Automatically initialize a GitHub repository for your dotfiles using the GitHub CLI (`gh`).
 - **Simple Configuration**: Use a straightforward syntax to map source files to their destinations.
-- **C++23 Modernity**: Built with the latest C++ standards for performance and safety.
+- **Profile Management**: Supports multiple configuration profiles (e.g., `main`, `wm`, `terminal`).
+- **GitHub Integration**: Creates & synces a GitHub repository for your dotfiles
 
 ## Prerequisites
 
 Before building and using `dotty`, ensure you have the following installed:
 
-- **Compiler**: A C++23 compatible compiler (e.g., GCC 13+, Clang 16+).
-- **Build System**: [xmake](https://xmake.io/)
 - **Dependencies**:
-  - [CLI11](https://github.com/CLIUtils/CLI11) (Can be installed via xmake)
-- **External Tools**:
-  - [git](https://git-scm.com/)
-  - [gh](https://cli.github.com/) (GitHub CLI, for repository initialization)
+  - [xmake] (https://xmake.io/) - Dotty's build tool
+  - [GCC] (https://gcc.gnu.org) - Be sure the compiler is up-to-date
+  - [git] (https://git-scm.com/) - Git command line
+  - [github-cli] (https://cli.github.com/) For repository management
+  - [CLI11] (https://github.com/CLIUtils/CLI11) For command line parsing
+  - [readline] (https://github.com/JuliaAttic/readline) For user input
 
 ## Installation
 
@@ -27,17 +26,16 @@ Before building and using `dotty`, ensure you have the following installed:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/dotty.git
+   git clone https://github.com/Monjaris/dotty.git
    cd dotty
    ```
 
-2. Build the project using xmake:
+2. Build dotty using xmake:
    ```bash
-   xmake f -m release
-   xmake
+   ./build.sh
    ```
 
-3. (Optional) Install the binary:
+3. Install the binary:
    ```bash
    xmake install
    ```
@@ -57,7 +55,7 @@ dotty init
 This command will:
 - Check for GitHub authentication.
 - Prompt for a repository name and visibility.
-- Initialize a local git repository in `~/.local/share/dotty/<profile>`.
+- Initialize a local git repository in `~/.local/share/dotty/<profile-name>`.
 - Create a corresponding repository on GitHub and push the initial commit.
 
 
@@ -73,7 +71,7 @@ The configuration file uses a simple mapping syntax:
 
 Example:
 ```
-"~/.zshrc" >> "zsh/zshrc"
+"~/.bashrc" >> "shell/.bashrc"
 "~/.config/nvim/init.lua" >> "nvim/init.lua"
 ```
 
@@ -87,7 +85,7 @@ dotty write
 ```
 
 
-This will parse your config file and update the files in `~/.local/share/dotty/<profile>` based on the mappings.
+This will parse your config file and update the files in `~/.local/share/dotty/<profile-name>` based on the mappings.
 
 
 ## Development Conventions
@@ -105,15 +103,13 @@ This will parse your config file and update the files in `~/.local/share/dotty/<
 - **Macros / Constexprs**: `UPPER_SNAKE_CASE`
 
 
-## Project Structure
+## Primary project files
 
 - `src/main.cpp`: Entry point.
-- `src/cli.cpp/hpp`: Command-line interface and subcommand implementations.
-- `src/cfman.hpp`: Core configuration manager logic.
 - `src/core.h`: Common utility functions and stream wrappers.
 - `src/common.h`: Global definitions, types, and includes.
 
 
 ## License
 
-GPLv2
+This project is licensed under the [GNU AGPLv3](./LICENSE.md) 2026 Monjaris

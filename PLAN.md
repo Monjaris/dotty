@@ -16,3 +16,11 @@ dotty edit { -  edit active or master profile
 	(active),
 	master
 }
+
+
+
+
+# NEXT
+1. port Cfman::Res to Resulted
+2. impl status per profile
+

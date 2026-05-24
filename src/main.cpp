@@ -7,6 +7,6 @@ int main(int argc, char** argv)
     cmd_line.setup();
     cmd_line.run();
 
-    for(auto ft:unimplemented) std::cerr<< "[UNIMPLEMENTED!] " << ft << std::endl;
+    $PRINT_UNIMPLEMENTED_FEATURES();
     return EXIT_SUCCESS;
 }
