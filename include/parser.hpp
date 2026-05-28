@@ -1,3 +1,4 @@
+#pragma once
 #include "profile.hpp"
 
 struct Token {
@@ -22,7 +23,7 @@ struct Lexer {
 
     char get() { return line[pos]; }
     bool checks() { return line.size() > pos; }
-    void step() { if(checks()) { ++pos; } }
+    void step(uint n=1) { while(checks() && n--) { ++pos; } }
     void skipws() { while(checks() && get()==' ') step(); }
 
     std::string lexString() {
@@ -114,7 +115,7 @@ struct Lexer {
             {
                 cm::debug("Lexer::lexMain(): Encountered unknown character: '", get(), "'");
                 tokens.emplace_back(tok.type=Token::UNKNOWN, tok.name="<error>");
-                step();
+                step(tok.name.size());
                 continue;
             }
 
@@ -145,8 +146,9 @@ struct MasterConfigParser {
     void advance() { if (checks()) ++idx; }
 
 
-    void parse()
+    Report parse()
     {
+        Report rep;
         idx = 0;
 
         while(checks())
@@ -163,9 +165,9 @@ struct MasterConfigParser {
                         ;
                         table.insert({key, value});
                     }
-                    else cm::terminate("After a EQUAL token next token.type should be STRING\n");
+                    else rep.addComplain("After a EQUAL token next token.type should be STRING\n");
                 }
-                else cm::terminate("After an IDENT token next token.type should be EQUAL\n");
+                else rep.addComplain("After an IDENT token next token.type should be EQUAL\n");
             }
 
             else if (get().type == Token::MENTION) {
@@ -183,9 +185,11 @@ struct MasterConfigParser {
                 }
             }
 
-            else cm::terminate("First token.type should be IDENT\n");
+            else rep.addComplain("First token.type should be IDENT\n");
             advance();
         }
+
+        return rep;
     }
 
     void eval()
@@ -194,14 +198,14 @@ struct MasterConfigParser {
             COMPTIME_STR PROFILE_ADD = ".add";
             COMPTIME_STR PROFILE_ACTIVE = ".active";
         COMPTIME_STR MENTION = "@";
-            COMPTIME_STR MENTION_GH_ACC = "gh-acc";
-            COMPTIME_STR MENTION_REPO_URL = "repo-url";
+            COMPTIME_STR MENTION_GH_ACC = ".gh-acc";
+            COMPTIME_STR MENTION_REPO_URL = ".repo-url";
 
 
         for (const auto& [first, second]  : table)
         {
             std::string left = first;
-            Profile profile("[no-name]", "[no-github-acc]", "[no-repo-url]");
+            Profile profile("[no-name]", "[no-github-acc]", "[no-repo-url]", false);
 
             if (cm::prefix_strip(left, PROFILE, &left)) {
                 if (cm::prefix_strip(left, PROFILE_ADD, &left)) {
@@ -212,27 +216,15 @@ struct MasterConfigParser {
                     vars[PROP(PROFILE, PROFILE_ACTIVE)] = second;
                 }
             }
-            // else if (cm::prefix_strip(left, MENTION, &left)) {
-            //     // if (!cm::vec_contains(profiles, key)) {
-            //         // cm::print("Master-Config: Profile does not exist: ", key);
-            //     // }
-            //     const char* mentioned_profile = left.data();
-            //     if (cm::prefix_strip(left, "gh-acc", &left)) {
-            //         vars[PROP(mentioned_profile, MENTION_GH_ACC)] = second;
-            //     }
-            //     else if (cm::prefix_strip(left, MENTION_REPO_URL, &left)) {
-            //         vars[PROP(mentioned_profile, "repo-url")] = second;
-            //     }
-            // }
             else if (!cm::obj_prop(left).first.empty()) {
                 const char* mentioned  = cm::obj_prop(left).first.c_str();
                 const std::string prop  = cm::obj_prop(left).second;
                 ;
-                if (prop == cm::concats(".", MENTION_GH_ACC)) {
-                    vars[PROP(mentioned, MENTION_GH_ACC)] = prop;
+                if (prop == MENTION_GH_ACC) {
+                    vars[PROP(mentioned, MENTION_GH_ACC)] = second;
                 }
-                else if (prop == cm::concats(".", MENTION_REPO_URL)) {
-                    vars[PROP(mentioned, MENTION_REPO_URL)] = prop;
+                else if (prop == MENTION_REPO_URL) {
+                    vars[PROP(mentioned, MENTION_REPO_URL)] = second;
                 }
             }
             else
@@ -240,14 +232,23 @@ struct MasterConfigParser {
                 cm::print("Master-Config: Eval-Error: Invalid tokens: '", first,"', '",second, "'\n");
             }
         }
-    }
 
-    void printReadProfiles() {
-        for (uint32 i=0;  i < profiles.size();  ++i) {
-            auto prof = profiles[i];
-            cm::print(i, ". ", prof.name, "\n");
+        for (auto& prof  : profiles) {
+            auto it_gh_acc = vars.find(PROP(prof.name.c_str(), MENTION_GH_ACC).c_str());
+            auto it_repo_url = vars.find(PROP(prof.name.c_str(), MENTION_REPO_URL));
+
+            if (it_gh_acc != vars.end()) {
+                prof.github_name = it_gh_acc->second;
+                cm::debug(prof.github_name);
+            } else cm::print("Warning: '",prof.name,'.',MENTION_GH_ACC, "' could not get fetched!\n");
+
+            if (it_repo_url != vars.end()) {
+                prof.repo_name = cm::repo_from_url(it_repo_url->second);
+                cm::debug(cm::make_repo_url(prof.github_name, prof.repo_name));
+            } else cm::print("Warning: '",prof.name,'.',MENTION_REPO_URL, "' could not get fetched!\n");
+
+            ;
         }
-        cm::print("\n");
     }
 
     Report unwrap() {

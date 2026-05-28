@@ -1,19 +1,19 @@
 #pragma once
-#include "common.h"
+#include "common.hpp"
 
 #ifndef DEBUG_ON
-#define DEBUG_ON (true)
+#   define DEBUG_ON (true)
 #endif
 
 #ifndef PRINT_ON
-#define PRINT_ON (true)
+#   define PRINT_ON (true)
 #endif
 
 
 NAMESPACE_START(cm)
 
-class CmdStream;
 struct Report;
+class CmdStream;
 
 
 // print to stdout via std::ostream
@@ -38,7 +38,7 @@ void debug(Args... args) {
 template <bool no_ansi_esc_seq=true, class T>
 inline T& prompt(const char* prompt, T& lval) {
     // Read input relevantly
-    if constexpr (std::is_arithmetic_v<T>)
+    if constexpr (std::is_arithmetic_v<T> && !std::is_same_v<char, T>)
     {
         if constexpr (no_ansi_esc_seq) {
             print(prompt);
@@ -60,7 +60,7 @@ inline T& prompt(const char* prompt, T& lval) {
             cm::print("\n");
         }
         else {
-            print(prompt);
+            cm::print(prompt);
             std::getline(std::cin, lval);
         }
     }
@@ -136,12 +136,17 @@ inline bool prefix_strip(const std::string& str, const std::string& prefix, std:
     return true;
 }
 
-// create a new file in the file system
-inline bool newFile(const fs::path& path) {
+// create a new file, return false if unsuccessful
+inline bool new_file(const fs::path& path) {
     if (fs::exists(path)) return false;
     std::ofstream file(path);
     return file.good();
 }
+
+// inline void spawn_proc(const char* bin, const char* args[]) {
+//    ;;
+// }
+
 
 // load $HOME to static constant once and return it
 inline const char* userHomePath(bool terminate_on_fail = false, const char* fail_msg="") {
@@ -201,6 +206,34 @@ inline std::pair<int32, int32> remove_dir_contents_recursive(
 }
 
 
+inline std::string make_repo_url(const strview github_name, const strview repo_name) {
+    const std::string url = std::format("https://github.com/{}/{}", github_name, repo_name);
+    return url;
+}
+
+inline std::string repo_from_url(const strview repo_url) {
+    static constexpr const char* BAD_URL = "[BAD-URL]";
+    static constexpr strview prefix = "https://github.com/";
+
+    // starts with "https://github.com/"
+    if (repo_url.size()<=prefix.size() || repo_url.substr(0, prefix.size())!=prefix) return BAD_URL;
+    strview path = repo_url.substr(prefix.size());
+
+    size_t first_slash = path.find('/');
+    if (first_slash == strview::npos || first_slash == 0) return BAD_URL;
+
+    strview repo_part = path.substr(first_slash + 1);
+    if (repo_part.empty()) return BAD_URL;
+
+    // remove if it has trailing slash
+    size_t next_slash = repo_part.find('/');
+    if (next_slash != strview::npos) repo_part = repo_part.substr(0, next_slash);
+
+    if (repo_part.empty()) return BAD_URL;
+    else return std::string(repo_part);
+}
+
+
 inline bool internet_is_connected() {
     int32 status = std::system("ping -c 1 google.com > /dev/null 2>&1");
     if (status == 0) return true;
@@ -211,6 +244,9 @@ inline bool internet_is_connected() {
 NAMESPACE_END(cm)
 
 
+
+
+#include "core.h"
 
 
 // contains error message and an error code
@@ -232,12 +268,11 @@ struct cm::Report {
     }
 
     // print `msg` and return true if `errc` is bad
-    Report printOnBad(bool new_line=true) const {
+    Report& printOnBad(bool new_line=true) {
         if (bool(*this)) {
             cm::print(msg, ((new_line)? "\n":""));
-            return Report{true};
         }
-        return Report{false};
+        return *this;
     }
 
     template <class... FmtArgs>
@@ -248,7 +283,15 @@ struct cm::Report {
         msg.append(complain);
     }
 
+    void terminateOnBad() {
+        if (bool(*this)) {
+            cm::terminate("terminated by Report::terminateOnBad()");
+        }
+    }
 };
+
+using cm::Report;
+
 
 
 
@@ -308,5 +351,3 @@ public:
 };
 
 
-
-using cm::Report;

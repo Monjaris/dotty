@@ -10,6 +10,4 @@ compile_commands.json
 
 # REST
 dotty
-master-config.dotty
-.src
-.dest
+PLAN.md

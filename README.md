@@ -19,6 +19,7 @@ Before building and using `dotty`, ensure you have the following installed:
   - [github-cli] (https://cli.github.com/) For repository management
   - [CLI11] (https://github.com/CLIUtils/CLI11) For command line parsing
   - [readline] (https://github.com/JuliaAttic/readline) For user input
+  - [bat] (https://github.com/sharkdp/bat) For file logging
 
 ## Installation
 

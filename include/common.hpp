@@ -6,6 +6,8 @@
 #include <expected>
 #include <filesystem>
 #include <fstream>
+#include <functional>
+#include <sstream>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -28,7 +30,10 @@
 inline std::vector<std::string> unimplemented;
 // bad yes, but i need highlight for better notice(GCC/Clang specific! who cares MSVC tho)
 #define $IMPLEMENT(_feature) (unimplemented.push_back(_feature), "")
-#define $PRINT_UNIMPLEMENTED_FEATURES() do{for(auto f:unimplemented)std::cerr<<f<<"\n";}while(0)
+#define $PRINT_UNIMPLEMENTED_FEATURES() \
+    do{if(unimplemented.size())std::cerr<<"\033[33mUNIMPLEMENTED:\n"; \
+        for(auto f:unimplemented)std::cerr<<f<<"\n" \
+    ;}while(0)
 
 using namespace std::string_literals;
 namespace fs = std::filesystem;
