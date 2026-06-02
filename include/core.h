@@ -19,7 +19,9 @@ class CmdStream;
 // print to stdout via std::ostream
 template <bool _flush=true, class... Args>
 inline void print(Args&&... args) {
-    if (!PRINT_ON) return;
+#if !PRINT_ON
+        return;
+#endif
     (std::cout << ... << std::forward<Args>(args));
     if(_flush) std::flush(std::cout);
 }
@@ -27,7 +29,9 @@ inline void print(Args&&... args) {
 
 template <class... Args>
 void debug(Args... args) {
-    if (!DEBUG_ON) return;
+#if !DEBUG_ON
+    return;
+#endif
     const strview pre = "[Debug] ";
     const strview post = "\n";
     cm::print(pre, std::forward<Args>(args)..., post);
@@ -71,6 +75,23 @@ inline T& prompt(const char* prompt, T& lval) {
 template <bool no_ansi_esc_seq=true, class T>
 inline T& prompt(T& lval) {
     return prompt("", lval);
+}
+
+// utility for YES/NO questions
+inline bool ask_confirm(const strview message, bool default_yes = true) {
+    const char* post = default_yes?(" (Y/n): "):(" (y/N): ");
+    std::string ask_msg = std::string(message).append(post);
+
+    char* inp = readline(ask_msg.c_str());
+    if (!inp) return(default_yes);
+
+    // pass ownership and free
+    std::string polish = (inp[std::strcspn(inp, "\n")] = '\0', inp);
+    free(inp);
+
+    if (polish.empty()) return default_yes;
+    if (std::tolower(polish[0]) == 'y') return default_yes;
+    return(false);
 }
 
 
@@ -143,9 +164,10 @@ inline bool new_file(const fs::path& path) {
     return file.good();
 }
 
-// inline void spawn_proc(const char* bin, const char* args[]) {
-//    ;;
-// }
+// creates directory if doesnt exist, else no-op
+inline void ensure_directory(fs::path dir_path) {
+    fs::create_directories(dir_path);
+}
 
 
 // load $HOME to static constant once and return it
@@ -176,7 +198,7 @@ inline bool remove_directory_contents(
     std::error_code remove_result;
 
     for (auto& item : fs::directory_iterator(directory)) {
-        if (exclude.size() && cm::contains(exclude, item.path().filename().c_str())) {
+        if (exclude.size() && !cm::contains(exclude, item.path().filename().c_str())) {
             fs::remove_all(item, remove_result);
         }
     }
@@ -233,6 +255,23 @@ inline std::string repo_from_url(const strview repo_url) {
     else return std::string(repo_part);
 }
 
+inline std::optional<std::string> active_github_account() {
+    std::string gh_acc = {};
+
+    Uptr<FILE, decltype(&pclose)> pipe = {
+        popen("gh api user --jq '.login'", "r"),
+        pclose
+    };
+    if (pipe == nullptr) return std::nullopt;
+
+    char buf[256];
+    while (std::fgets(buf, sizeof(buf), pipe.get())) {
+        gh_acc += buf;
+    }
+
+    if (gh_acc.empty()) return std::nullopt;
+    return strip_nl(gh_acc);
+}
 
 inline bool internet_is_connected() {
     int32 status = std::system("ping -c 1 google.com > /dev/null 2>&1");
@@ -244,9 +283,6 @@ inline bool internet_is_connected() {
 NAMESPACE_END(cm)
 
 
-
-
-#include "core.h"
 
 
 // contains error message and an error code
@@ -326,7 +362,7 @@ public:
 
         if (capture_output) {
             std::string out;
-            std::unique_ptr<FILE, decltype(&pclose)> pipe = {  // coolest RAII trick fr
+            std::unique_ptr<FILE, decltype(&pclose)> pipe = {
                 popen(line.c_str(), "r"), pclose
             };
             if (pipe == nullptr) return -1;

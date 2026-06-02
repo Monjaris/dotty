@@ -11,12 +11,12 @@ if is_mode("release") then
 end
 
 if is_mode("debug") then
-    set_strip("all")
+    ;
 end
 
 
 add_rules("plugin.compile_commands.autoupdate")
-set_policy("build.ccache", true)
+set_policy("build.ccache", false)
 -- add_rules("c++.unity_build")
 
 add_requires("cli11", {system = true})

@@ -9,10 +9,11 @@ struct Cfman
 
     const fs::path HOME = cm::userHomePath(true, "$HOME is empty");
     fs::path config_d = HOME/".config/dotty";
-    fs::path storage_d = HOME/".local/share/dotty";
+    fs::path data_d = HOME/".local/share/dotty";
 
     const char* master_src = ".dotty";
     const char* config_src = "config";
+    const char* storage_cfgref = ".dotty.d";
     Profile current_profile = Profile{NO_PROFILE, "", "", false};
 
     std::vector<SrcDest> path_pairs = {};

@@ -14,14 +14,22 @@ Before building and using `dotty`, ensure you have the following installed:
 
 - **Dependencies**:
   - [xmake] (https://xmake.io/) - Dotty's build tool
-  - [GCC] (https://gcc.gnu.org) - Be sure the compiler is up-to-date
-  - [git] (https://git-scm.com/) - Git command line
   - [github-cli] (https://cli.github.com/) For repository management
   - [CLI11] (https://github.com/CLIUtils/CLI11) For command line parsing
   - [readline] (https://github.com/JuliaAttic/readline) For user input
   - [bat] (https://github.com/sharkdp/bat) For file logging
 
 ## Installation
+
+### Dotty is available in AUR
+```bash
+yay -S dotty
+```
+OR, if you use paru:
+```bash
+paru -S dotty
+```
+
 
 ### Building from Source
 
@@ -40,6 +48,7 @@ Before building and using `dotty`, ensure you have the following installed:
    ```bash
    xmake install
    ```
+
 
 
 ## Usage
@@ -82,7 +91,7 @@ Example:
 To copy your local files into the `dotty` storage:
 
 ```bash
-dotty write
+dotty update
 ```
 
 
@@ -94,7 +103,7 @@ This will parse your config file and update the files in `~/.local/share/dotty/<
 
 ### Header Files
 - `*.hpp`: Headers that have (or are planned to have) implementation in a corresponding `*.cpp`.
-- `*.h`: Headers that do not need a separate implementation file (templates, inline functions, constants, etc.).
+- `*.h`: Headers that do not need a separate implementation file (templates, inline functions, constants, etc.) - exception: PCHs.
 
 
 ### Symbols & Tokens
@@ -108,9 +117,5 @@ This will parse your config file and update the files in `~/.local/share/dotty/<
 
 - `src/main.cpp`: Entry point.
 - `src/core.h`: Common utility functions and stream wrappers.
-- `src/common.h`: Global definitions, types, and includes.
+- `src/common.hpp`: Global definitions, types, and includes, it's compiled to a PCH via xmake.
 
-
-## License
-
-This project is licensed under the [GNU AGPLv3](./LICENSE.md) 2026 Monjaris

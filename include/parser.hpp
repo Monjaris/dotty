@@ -277,8 +277,10 @@ struct ConfigParser {
     bool checks() { return tokens.size() > idx; }
     void advance() { if (checks()) ++idx; }
 
-    void parseMain()
+
+    Report parseMain()
     {
+        Report res;
         idx = 0;
 
         while(checks())
@@ -295,17 +297,19 @@ struct ConfigParser {
 
                         path_pairs.emplace_back(SrcDest{src, dest});
                     }
-                    else cm::terminate("After a REDIRECTOR token next token.type should be STRING\n");
+                    else res.addComplain("After a REDIRECTOR token next token.type should be STRING\n");
                 }
-                else cm::terminate("After a STRING token next token.type should be REDIRECTOR\n");
+                else res.addComplain("After a STRING token next token.type should be REDIRECTOR\n");
             }
-            else cm::terminate("First token.type should be STRING\n");
+            else res.addComplain("First token.type should be STRING\n");
 
             advance();
         }
+
+        return res;
     }
 
-    auto result() {
+    std::vector<SrcDest> result() const {
         return path_pairs;
     }
 };

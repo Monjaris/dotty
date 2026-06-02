@@ -43,3 +43,4 @@ using uint32 = uint32_t;
 using usize = size_t;
 using int64 = int64_t;
 using strview = std::string_view;
+template<class T, class U=std::default_delete<T>> using Uptr = std::unique_ptr<T, U>;

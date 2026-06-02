@@ -10,7 +10,7 @@ Report Cfman::validateProfileName(const std::string& name) {
     ){
         return Report::Bad("Profile name contains illegal character");
     }
-    printf("werfee");
+
     return Report::Good();
 }
 
@@ -19,7 +19,7 @@ Report Cfman::validateRepoName(const std::string& repo) {
     if (repo.empty()) {
         return Report::Bad("Repo name should not be empty");
     }
-    cm::print("aedw");
+
     return Report::Good();
 }
 
@@ -79,13 +79,12 @@ Report Cfman::newProfile(
     } else return Report::Bad("{} '{}': Failed creating config directory tree.", err, name);
 
     // constants
-    const fs::path repo_d = cm::parsePathTilde(storage_d/name);
+    const fs::path repo_d = cm::parsePathTilde(data_d/name);
     const fs::path config = cm::parsePathTilde(config_d/name);
 
     cm::CmdStream cmd;
     cmd
-        .add("mkdir -p {}", repo_d.string())
-        .add("cd {}", repo_d.string())
+        .add("mkdir -p {0}/{1} && cd {0}", repo_d.string(), storage_cfgref)
         .add("git init")
         .add("touch .gitkeep")
         .add("git add .gitkeep")
@@ -213,7 +212,7 @@ Report Cfman::cleanConfigs(bool config, bool storage) {
     }
 
     if (storage) {
-        target_path = storage_d/currentProfile();
+        target_path = data_d/currentProfile();
         if (fs::exists(target_path)) {
             cm::print(":: Removing config storage contents: ", target_path.string());
             std::pair ratio = cm::remove_dir_contents_recursive(target_path);
@@ -285,7 +284,7 @@ void Cfman::SourceToStorage() {
 
         auto src_path = cm::parsePathTilde(src);
 
-        auto dest_path = cm::parsePathTilde(storage_d/currentProfile())/dest;
+        auto dest_path = cm::parsePathTilde(data_d/currentProfile())/dest;
         // NOTE: Add an explanation here
         if (dest_path.string().back() == '/') {
             cm::debug("Converting '", dest_path.string(), "' to '",
@@ -314,7 +313,7 @@ void Cfman::StorageToSources() {
             ); continue;
         }
 
-        auto dest_path = cm::parsePathTilde(storage_d/currentProfile())/dest;
+        auto dest_path = cm::parsePathTilde(data_d/currentProfile())/dest;
         auto src_path = cm::parsePathTilde(src);
         cm::debug("salamm!");
 
