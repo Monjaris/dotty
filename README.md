@@ -13,11 +13,11 @@
 Before building and using `dotty`, ensure you have the following installed:
 
 - **Dependencies**:
-  - [xmake] (https://xmake.io/) - Dotty's build tool
-  - [github-cli] (https://cli.github.com/) For repository management
-  - [CLI11] (https://github.com/CLIUtils/CLI11) For command line parsing
-  - [readline] (https://github.com/JuliaAttic/readline) For user input
-  - [bat] (https://github.com/sharkdp/bat) For file logging
+  - [xmake](https://xmake.io/) - Dotty's build tool
+  - [github-cli](https://cli.github.com/) For repository management
+  - [CLI11](https://github.com/CLIUtils/CLI11) For command line parsing
+  - [readline](https://github.com/JuliaAttic/readline) For user input
+  - [bat](https://github.com/sharkdp/bat) For file logging
 
 ## Installation
 
@@ -75,7 +75,7 @@ This command will:
 
 The configuration file uses a simple mapping syntax:
 ```
-"/path/to/source/file" >> "relative/path/in/storage"
+"/path/to/source/file" >> "relative/path/in/repo"
 ```
 
 
@@ -88,19 +88,17 @@ Example:
 
 ### 3. Applying configs
 
-To copy your local files into the `dotty` storage:
-
-
+To sync your mapped files into the repo locally:
 ```bash
 dotty update # dotty u
 ```
 
-Push repo to github repository which was configuired
+Push repo to github repository
 ```bash
 dotty push
 ```
 
-Pull your configs and apply to system, to get them on another machine or for rollback
+Pull your configs and apply so we can acquire them on another machine or to rollback
 ```bash
 dotty pull
 ```
@@ -109,6 +107,7 @@ Dotty supports multiple profiles. to create one:
 ```bash
 dotty profile new terminal-configs # dotty p n terminal-configs
 ```
+
 You can switch between them
 ```bash
 dotty profile switch main # dotty p s main

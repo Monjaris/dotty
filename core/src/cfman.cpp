@@ -328,7 +328,19 @@ void Cfman::configToStorage() {
     for (auto [src, dest] : path_pairs) {
         if (dest.is_absolute()) {
             cm::print(
-                __PRETTY_FUNCTION__+5, ": Error: destination should be relative path!",
+                __PRETTY_FUNCTION__+5, ": Error: destination should be relative path! ",
+                "skipping..\n"
+            ); continue;
+        }
+        if (fs::directory_entry(src).is_directory()) {
+            cm::print(
+                __PRETTY_FUNCTION__+5, ": Error: source shouldn't be a directory! ",
+                "skipping..\n"
+            ); continue;
+        }
+        if (fs::directory_entry(dest).is_directory()) {
+            cm::print(
+                __PRETTY_FUNCTION__+5, ": Error: destination shouldn't be a directory! ",
                 "skipping..\n"
             ); continue;
         }

@@ -24,18 +24,22 @@ int32 CmdLine::do_init() {
     cm::ensure_directories(dotty.data_d);
 
     // Check github authentication status
-    cm::print("Checking GitHub CLI authentication...\n");
+    cm::debug("Checking GitHub CLI authentication...\n");
     int auth_status = std::system("gh auth status --hostname github.com > /dev/null 2>&1");
     if (FAILED auth_status) {
         cm::terminate("gh is not authenticated. Please run 'gh auth login' first.\n");
+    } else {
+        cm::debug("GitHub CLI authenticated.\n");
     }
-    cm::print("GitHub CLI authenticated.\n\n");
 
     // Get github authenticated username
-    cm::CmdStream gh_handle;
-    gh_handle.add("gh api user --jq '.login'");
-    if (FAILED gh_handle.run(" && ", true)) cm::terminate("Fetching github username failed!");
-    const std::string& gh_auth_name = gh_handle.output();
+    auto get_gh_auth = cm::CmdStream {}
+        .add("gh api user --jq '.login'")
+    ;
+    if (FAILED get_gh_auth.run(" && ", true)) {
+        cm::terminate("Fetching authenticated github username failed!");
+    }
+    const std::string& gh_auth_name = get_gh_auth.output();
 
 
     // Prompts for making the repo
@@ -58,7 +62,6 @@ int32 CmdLine::do_init() {
 
     std::string ini_prof;
     cm::prompt("Enter profile name(same as profile's directory name) [main]: ", ini_prof);
-    cm::print("\n");
     if (ini_prof.empty()) ini_prof = "main";
 
     dotty.validateProfileName(ini_prof).printOnBad().terminateOnBad();
@@ -67,9 +70,13 @@ int32 CmdLine::do_init() {
     fs::path repo_d = cm::parsePathTilde(dotty.data_d/ini_prof);
     fs::path config = cm::parsePathTilde(dotty.config_d/ini_prof);
 
-    std::string commit_msg = "Initial commit of this configuration profile";
-    cm::prompt(std::format("Enter commit message [\"{}\"]: ", commit_msg).c_str(), commit_msg);
-    dotty.newProfile(ini_prof, gh_auth_name, repo_name, visibility, "")
+    // Prompt for commit message
+    static const std::string default_commit_msg = "\"Initial commit of this configuration profile\"";
+    std::string commit_msg;
+    cm::prompt(std::format("Enter commit message [{}]: ", default_commit_msg).c_str(), commit_msg);
+    if (commit_msg.empty()) commit_msg = default_commit_msg;
+
+    dotty.newProfile(ini_prof, gh_auth_name, repo_name, visibility, commit_msg.c_str())
         .printOnBad()
         .terminateOnBad();
     // dotty.load(true);  // newProfile loads anyways

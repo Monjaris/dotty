@@ -120,7 +120,7 @@ int32 CmdLine::setup()
         );
             ssc_new->add_option("name,--name,-n", impl->v.new_prof_name, "New profile's name")->required();
             ssc_new->add_option("--repo,-r", impl->v.new_repo_name, "New profile's repo name")->required();
-            ssc_new->add_option("--commit-message,-m", impl->v.new_commit_msg, "New profile's initial commit message")->required();
+            ssc_new->add_option("--commit-msg,-m", impl->v.new_commit_msg, "New profile's initial commit message")->required();
             ssc_new->add_flag("--public", impl->v.new_repo_pub, "New repo's publicity status");
         ;
     //
@@ -148,6 +148,7 @@ int32 CmdLine::setup()
     } catch (const CLI::ParseError& e) {
         std::exit(impl->cli.exit(e));
     }
+
     return EXIT_SUCCESS;
 }
 #undef BIND
