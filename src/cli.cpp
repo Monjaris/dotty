@@ -103,7 +103,7 @@ int32 CmdLine::setup()
         ->add_option("configuration", impl->v.config_, "Configuire master")
     ;
     //
-    SubCmd* sc_profile_ = newSubCmd(&APP, {"profile", "p", "pro"},
+    SubCmd* sc_profile_ = newSubCmd(&APP, {"profile", "p"},
         BIND(do_profile_("")),
         "Profile related commands", true, {0,0}, {1, 1}
     );
