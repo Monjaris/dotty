@@ -196,9 +196,9 @@ Report Cfman::setActiveProfile(const std::string& name) {
         master_new << line << "\n";
     }
 
-    master_new << "\n\n";
+    master_new << "\n";
     master_new << "profile.active = \"" << name << "\"\n";
-    master_new << "\n\n";
+    master_new << "\n";
 
     Profile* found = getProfileByName(name);
     current_profile = *found;
@@ -334,10 +334,16 @@ void Cfman::load(bool optimistic) {
 
 
 // Copy all source files to destination files, pairs defined by a member
-void Cfman::systemToRepo() {
+std::array<std::vector<SrcDest>, 4> Cfman::systemToRepo() {
+    static std::vector<SrcDest> succeed_cp_f;
+    static std::vector<SrcDest> succeed_cp_d;
+    static std::vector<SrcDest> succeed_ln_f;
+    static std::vector<SrcDest> succeed_ln_d;
+
     COMPTIME_STR ERR = "Skipping target: ";
     auto should_skip = [ERR](const fs::path& src, const fs::path& dest, bool accept_dirs) ->bool {
         bool signal_skip = false;
+        const std::string& dest_str = dest.string();
         // destination should be relative to the repo
         if (dest.is_absolute()) {
             cm::print(
@@ -353,9 +359,14 @@ void Cfman::systemToRepo() {
             ); signal_skip = true;
         }
         // Dont allow trailing '/'
-        else if (dest.string().ends_with("/")) {
+        else if (dest_str.ends_with("/")) {
             cm::print(
-                ERR, "path has trailing '/'"
+                ERR, "path has trailing '/'\n"
+            ); signal_skip = true;
+        }
+        else if (dest_str.starts_with("./") || dest_str.starts_with("../")) {
+            cm::print(
+                ERR, "path starts with illegal character set\n"
             ); signal_skip = true;
         }
         // return value will signal if called should 'continue' loop
@@ -363,39 +374,48 @@ void Cfman::systemToRepo() {
     }; // lambda should_skip;
 
 
+    fs::path repo_d = data_d/activeProf();
+
     // COPY-FILES
     for (auto [src, dest] : files_to_copy) {
         if (should_skip(src, dest, false)) continue;
+        dest = repo_d / dest;
         cm::ensure_directories(dest.parent_path());
         try {
             fs::copy_file(src, dest, fs::copy_options::update_existing);
         } catch (const std::exception& e) {
             cm::print(ERR, e.what());
         }
+        succeed_cp_f.emplace_back(src, dest);
     }
     // LINK-FILES
     for (auto [src, dest] : files_to_link) {
         if (should_skip(src, dest, false)) continue;
+        dest = repo_d / dest;
         cm::ensure_directories(dest.parent_path());
         try {
             fs::create_symlink(src, dest);
         } catch (const std::exception& e) {
             cm::print(ERR, e.what());
         }
+        succeed_ln_f.emplace_back(src, dest);
     }
     // COPY-DIRECTORIES
     for (auto [src, dest] : dirs_to_copy) {
         if (should_skip(src, dest, true)) continue;
+        dest = repo_d / dest;
         cm::ensure_directories(dest.parent_path());
         try {
             cm::copy_directory(src, dest, true);
         } catch (const std::exception& e) {
             cm::print(ERR, e.what());
         }
+        succeed_cp_d.emplace_back(src, dest);
     }
     // LINK-DIRECTORIES
     for (auto [src, dest] : dirs_to_link) {
         if (should_skip(src, dest, true)) continue;
+        dest = repo_d / dest;
         cm::ensure_directories(dest.parent_path());
         try {
             fs::create_directory_symlink(
@@ -404,7 +424,13 @@ void Cfman::systemToRepo() {
         } catch (const std::exception& e) {
             cm::print(ERR, e.what());
         }
+        succeed_ln_d.emplace_back(src, dest);
     }
+
+    // return paths which succeed to be copied/linked
+    return std::array<std::vector<SrcDest>, 4>{
+        succeed_cp_f, succeed_ln_f, succeed_cp_d, succeed_ln_d
+    };
 }
 
 

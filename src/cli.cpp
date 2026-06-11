@@ -84,14 +84,14 @@ int32 CmdLine::setup()
         "Write configs to configs storage", false, {0,0}, {0,0}
     );
     //
-    SubCmd* sc_push = newSubCmd(&APP, {"push", "->"},
+    SubCmd* sc_push = newSubCmd(&APP, {"push"},
         BIND(do_push(impl->v.push_commit_msg.c_str())),
         "Push config storage to the github repo", false, {0,0}, {0,0}
     ); sc_push
-        ->add_option("commit-message", impl->v.push_commit_msg, "Push with commit message")->required()
+        ->add_option("--commit-message", impl->v.push_commit_msg, "Push with commit message")->required()
     ;
     //
-    SubCmd* sc_pull = newSubCmd(&APP, {"pull", "<-"},
+    SubCmd* sc_pull = newSubCmd(&APP, {"pull"},
         BIND(do_pull()),
         "Pull your config from the repo", false, {0,0}, {0,0}
     );
@@ -147,7 +147,7 @@ int32 CmdLine::setup()
     try {
         impl->cli.parse(impl->argc, impl->argv);
     } catch (const CLI::ParseError& e) {
-        std::exit(impl->cli.exit(e));
+        ::exit(impl->cli.exit(e));
     }
 
     return EXIT_SUCCESS;

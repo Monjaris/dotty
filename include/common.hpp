@@ -19,6 +19,7 @@
 #define NAMESPACE_START(_name) namespace _name {
 #define NAMESPACE_END(_name) }
 #define COMPTIME_STR constexpr const char* const
+#define CATSTR(_s1, _s2) _s1###_s2
 // use it only for integers, bool(true) is success
 #define FAILED (0)!=
 

@@ -74,15 +74,23 @@ This command will:
 `dotty` looks for configuration in `~/.config/dotty/<profile>/config`. 
 
 The configuration file uses a simple mapping syntax:
-```
+```dotty
+# copy file
 "/path/to/source/file" >> "relative/path/in/repo"
+# copy directory
+"/path/to/source/dir" >>* "relative/path/in/repo"
+# link file
+"/path/to/source/file" -> "relative/path/in/repo"
+# link directory
+"/path/to/source/dir" ->* "relative/path/in/repo"
 ```
 
 
 Example:
 ```
 "~/.bashrc" >> "shell/.bashrc"
-"~/.config/nvim/init.lua" >> "nvim/" # delivers file name properly
+"~/.config/nvim/init.lua" -> "nvim/.."  # '..' expands to source
+"~/.config/my-wm-name" >>* "full-wm-config"
 ```
 
 
@@ -120,7 +128,7 @@ dotty profile delete terminal-configs # dotty p d terminal-configs
 
 You can also directly open configuration instead of the manual way
 ```bash
-dotty config
+dotty config # dotty c
 ```
 
 
@@ -134,7 +142,7 @@ dotty config
 ### Primary project files
 
 - `src/main.cpp`: Entry point.
-- `core/include/core.hpp`: Common utility functions and stream wrappers.
+- `core/include/core.hpp`: Common utility functions and std-lib wrappers.
 - `include/common.hpp`: Global definitions, types, and includes, it's compiled to a PCH via xmake.
 
 

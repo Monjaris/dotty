@@ -1,9 +1,33 @@
 #pragma once
 #include "parser.hpp"
 
-struct Cfman
+NAMESPACE_START(cm)
+
+struct Clr {
+    static constexpr char* _esc = (char*)"\033[";
+    const char* value;
+    Clr (const char* ansi = "0") {
+        value = ::strcat(::strcat(_esc, value), "m");
+    }
+    operator const char*() { return this->value; }
+};
+
+// inline Clr NORM = Clr{};
+// inline Clr RED = "31";
+// inline Clr GRN = "32";
+// inline Clr YLW = "33";
+// inline Clr BLU = "34";
+// inline Clr MAG = "35";
+// inline Clr CYN = "36";
+
+NAMESPACE_END(cm)
+
+
+class Cfman
 {
+public:
     static COMPTIME_STR NO_PROFILE = "[no-profile]";
+    static constexpr bool COLORS = true;
 
     std::vector<Profile> profiles;
 
@@ -32,6 +56,25 @@ struct Cfman
         ProfileAlreadySet=7,
     };
 
+    // struct Msg {
+        // const char* clr;
+        // std::string val;
+        // no-color constructor
+        // template <class T>
+        // Msg(T v) : clr(""), val(std::format("{}", v)) {}
+        // colored constructor
+        // template <class T>
+        // Msg(const char* color, T v) : clr(color), val(std::format("{}", v)) {}
+    // };
+    // CF stands for ColorFul, yes
+    // #define CF(_color, _val) ::Cfman::Msg{_color, _val}
+    // void say(std::initializer_list<Msg> args) {
+        // for (auto& m : args) {
+            // if constexpr (COLORS) cm::print(m.clr, m.val, cm::NORM);
+            // else cm::print(m.val);
+        // }
+    // }
+
     Report validateProfileName(const std::string& name);
     Report validateRepoName(const std::string& repo);
     bool noProfilesExist();
@@ -49,7 +92,7 @@ struct Cfman
     Report cleanConfigs(bool config, bool storage);
     bool detectPreinitConfig();
     void load(bool optimistic = false);
-    void systemToRepo();
+    std::array<std::vector<SrcDest>, 4> systemToRepo();
     void repoToSystem();
 };
 

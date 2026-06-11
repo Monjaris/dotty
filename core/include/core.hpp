@@ -3,7 +3,7 @@
 #include "common.hpp"
 
 #ifndef DEBUG_ON
-#   define DEBUG_ON (0)
+#   define DEBUG_ON (1)
 #endif
 
 #ifndef PRINT_ON
@@ -33,7 +33,7 @@ void debug(Args... args) {
 #if !DEBUG_ON
     return;
 #endif
-    const strview pre = "[Debug] ";
+    const strview pre = "\033[2m[Debug]\033[0m ";
     const strview post = "\n";
     cm::print(pre, std::forward<Args>(args)..., post);
 }
@@ -112,11 +112,11 @@ inline bool ask_confirm(const strview message, bool default_yes = true) {
     if (!inp) return(default_yes);
 
     // pass ownership and free
-    std::string polish = (inp[std::strcspn(inp, "\n")] = '\0', inp);
+    std::string polish = (inp[::strcspn(inp, "\n")] = '\0', inp);
     free(inp);
 
     if (polish.empty()) return default_yes;
-    if (std::tolower(polish[0]) == 'y') return true;
+    if (::tolower(polish[0]) == 'y') return true;
     return(false);
 }
 
@@ -125,7 +125,7 @@ inline bool ask_confirm(const strview message, bool default_yes = true) {
 template <int _errc=1, class... Args>
 [[noreturn]] inline void terminate(Args&&... args) {
     (std::cerr << ... << std::forward<Args>(args)) << std::endl;
-    std::exit(_errc);
+    ::exit(_errc);
 }
 
 
@@ -171,6 +171,7 @@ template <class Container, class Underlying>
 inline bool contains(const Container& cont, const Underlying& element) {
     return std::find(cont.begin(), cont.end(), element) != cont.end();
 }
+
 
 inline bool str_has_any_of(const std::string& str, std::initializer_list<char> chars) {
     for (char c : chars) {
@@ -302,7 +303,7 @@ inline std::optional<std::string> active_github_account() {
     if (pipe == nullptr) return std::nullopt;
 
     char buf[256];
-    while (std::fgets(buf, sizeof(buf), pipe.get())) {
+    while (::fgets(buf, sizeof(buf), pipe.get())) {
         gh_acc += buf;
     }
 
@@ -311,7 +312,7 @@ inline std::optional<std::string> active_github_account() {
 }
 
 inline bool internet_is_connected() {
-    int32 status = std::system("ping -c 1 google.com > /dev/null 2>&1");
+    int32 status = ::system("ping -c 1 google.com > /dev/null 2>&1");
     if (status == 0) return true;
     return false;
 }
@@ -406,7 +407,7 @@ public:
             if (pipe == nullptr) return -1;
 
             char buf[256];
-            while (std::fgets(buf, sizeof(buf), pipe.get()) != nullptr)
+            while (::fgets(buf, sizeof(buf), pipe.get()) != nullptr)
             {
                 output_buf.append(buf);
             }
@@ -414,7 +415,7 @@ public:
 
             return pclose(pipe.release());
         }
-        return std::system(line.data());
+        return ::system(line.data());
     }
 
     // Output loads to internal buffer after calling .run().

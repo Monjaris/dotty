@@ -25,7 +25,7 @@ int32 CmdLine::do_init() {
 
     // Check github authentication status
     cm::debug("Checking GitHub CLI authentication...\n");
-    int auth_status = std::system("gh auth status --hostname github.com > /dev/null 2>&1");
+    int auth_status = ::system("gh auth status --hostname github.com > /dev/null 2>&1");
     if (FAILED auth_status) {
         cm::terminate("gh is not authenticated. Please run 'gh auth login' first.\n");
     } else {
@@ -117,7 +117,7 @@ int32 CmdLine::do_update() {
     Lexer lexer;
     ConfigParser parser;
     std::ifstream conf(
-        cm::parsePathTilde(dotty.config_d/dotty.activeProf()/dotty.config_src),
+        dotty.config_d/dotty.activeProf()/dotty.config_src,
         std::ios::in
     );
     if (!conf.is_open()) cm::terminate("File could not be opened!\n");
@@ -127,18 +127,58 @@ int32 CmdLine::do_update() {
         lexer.lexMain();
         cm::print("Parsing tokens...\n");
         parser.tokens = lexer.result();
+#if DEBUG_ON
+        cm::debug("\n\nLexed tokens:\n");
+        lexer.print();
+#endif
         parser.parseMain().printOnBad();
 
-        cm::print("Adding new values to the base...\n");
+        cm::debug("Loading parsed lists...\n\n");
         dotty.files_to_copy = parser.copy_files;
         dotty.files_to_link = parser.link_files;
         dotty.dirs_to_copy = parser.copy_dirs;
         dotty.dirs_to_link = parser.link_dirs;
     }
-    cm::print("\n\nCopying configs to their destinations...\n");
-    dotty.systemToRepo();
-    cm::print("\n\nLexed tokens:\n");
-    lexer.print();
+    enum { CPF, LNF, CPD, LND };  // CP=copy, LN=link, F=file, D=dir
+    // load succeed ones
+    auto succeed = dotty.systemToRepo();
+    auto copied_files = succeed[CPF];
+    auto linked_files = succeed[LNF];
+    auto copied_dirs = succeed[CPD];
+    auto linked_dirs = succeed[LND];
+
+    if (!copied_files.empty()) {
+        cm::print("Copied files:\n");
+        for (auto& [src, dest]  : copied_files) {
+            cm::print(
+                "  '", src.string(), "' -> '", dest.string(), "'\n"
+            );
+        }
+    } else cm::print("No files copied!\n");
+    if (!copied_dirs.empty()) {
+        cm::print("Copied directories:\n");
+        for (auto& [src, dest]  : copied_dirs) {
+            cm::print(
+                "  '", src.string(), "' -> '", dest.string(), "'\n"
+            );
+        }
+    } else cm::print("No directories copied!\n");
+    if (!linked_files.empty()) {
+        cm::print("Linked files:\n");
+        for (auto& [src, dest]  : linked_files) {
+            cm::print(
+                "  '", src.string(), "' -> '", dest.string(), "'\n"
+            );
+        }
+    } else cm::print("No files linked!\n");
+    if (!linked_dirs.empty()) {
+        cm::print("Linked directories:\n");
+        for (auto& [src, dest]  : linked_dirs) {
+            cm::print(
+                "  '", src.string(), "' -> '", dest.string(), "'\n"
+            );
+        }
+    } else cm::print("No directories linked!\n");
 
     return EXIT_SUCCESS;
 }

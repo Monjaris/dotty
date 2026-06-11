@@ -58,6 +58,7 @@ struct Lexer {
 
     LexRes lexCopier() {
         std::string copier = ">";
+        step();
         if (get() == '>') {
             copier += get();
             step();
@@ -67,6 +68,7 @@ struct Lexer {
 
     LexRes lexLinker() {
         std::string linker = "-";
+        step();
         if (get() == '>') {
             linker += get();
             step();
@@ -121,7 +123,7 @@ struct Lexer {
     std::string lexMention() {
         std::string mention;
         step();
-        if (!isalpha(get())) { // cant be a profile if starts with non-alpha
+        if (!::isalpha(get())) { // cant be a profile if starts with non-alpha
             cm::terminate("lexMention(): first character is not alpha!");
         }
         while (isalnum(get()) || get() == '.' || get() == '-') {
@@ -133,7 +135,7 @@ struct Lexer {
 
     std::string lexIdent() {
         std::string ident;
-        while (isalpha(get()) || get() == '.' || get() == '-') {
+        while (::isalpha(get()) || get() == '.' || get() == '-') {
             ident += get();
             step();
         }
@@ -167,7 +169,7 @@ struct Lexer {
 
     void print() {
         for (uint32 i=0;  i < tokens.size();  ++i) {
-            cm::print((char)tokens[i].type, " : ", tokens[i].name, "\n");
+            cm::print((char)tokens[i].type, " : '", tokens[i].name, "'\n");
         }
     }
 
@@ -399,7 +401,7 @@ struct ConfigParser {
     void advance() { if (checks()) ++idx; }
 
     // Interdiamate parse function
-    void parsePaths(std::string* const src, std::string* const dest) {
+    void parsePaths(std::string* src, std::string* dest) {
         // SRC parsing
         *src = cm::parsePathTilde(*src);
         // DEST parsing
@@ -409,9 +411,12 @@ struct ConfigParser {
 
     Report parseMain()
     {
-        Report res;
-        idx = 0;
+        copy_files.reserve(32);
+        copy_dirs.reserve(32);
+        link_files.reserve(32);
+        link_dirs.reserve(32);
 
+        Report res;
         while(checks())
         {
             // STRING -> OP -> STRING
@@ -419,8 +424,8 @@ struct ConfigParser {
 
             if (get().type == Token::STRING) {
                 std::string src = get().name;
-
                 advance();
+
                 if (get().type == Token::COPIER) {
                     ;
                     advance();
@@ -464,14 +469,10 @@ struct ConfigParser {
                 else res.addComplain("Expected operator after STRING\n");
             }  // if STRING
 
-            else if (0) {
-                ;
-            }
-
             else
             {
                 res.addComplain(
-                    "Unexpected token: {} with the type of {}",
+                    "Unexpected token: '{}' with the type of <{}>",
                     get().name, (char)get().type
                 );
             }
