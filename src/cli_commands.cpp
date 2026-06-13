@@ -123,9 +123,9 @@ int32 CmdLine::do_update() {
     if (!conf.is_open()) cm::terminate("File could not be opened!\n");
 
     while (std::getline(conf, lexer.line)) {
-        cm::print("Lexing config...\n");
+        cm::debug("Lexing config...\n");
         lexer.lexMain();
-        cm::print("Parsing tokens...\n");
+        cm::debug("Parsing tokens...\n");
         parser.tokens = lexer.result();
 #if DEBUG_ON
         cm::debug("\n\nLexed tokens:\n");
@@ -282,7 +282,7 @@ int32 CmdLine::do_config(strview option) {
         }
         else {
             return cm::CmdStream{}
-                .add("VISUAL=\"$EDITOR\" $EDITOR {}", cfg_path.c_str())
+                .add("{} {}", cm::get_sys_editor(), cfg_path.string())
                 .run(" && ", false);
         }
     };

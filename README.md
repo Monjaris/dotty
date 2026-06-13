@@ -41,7 +41,7 @@ paru -S dotty
 
 2. Build dotty using xmake:
    ```bash
-   ./build.sh
+   ./build.sh rel
    ```
 
 3. Install the binary:

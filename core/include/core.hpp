@@ -207,6 +207,7 @@ inline void copy_directory(const fs::path& src_d, const fs::path& dest_d, bool c
     ));
 }
 
+
 // load $HOME to static constant once and return it
 inline const char* userHomePath(bool terminate_on_fail = false, const char* fail_msg="") {
     static const char* home_path = getenv("HOME");
@@ -264,11 +265,32 @@ inline std::pair<int32, int32> remove_dir_contents_recursive(
     return {removed_c, total_c};
 }
 
+
+// get system editor with nice fallbacks
+inline const char* get_sys_editor() {
+    static const char* env_editor = ::getenv("EDITOR");
+    static const char* env_visual = ::getenv("VISUAL");
+    static const char* text_editor = nullptr;
+
+    if (text_editor == nullptr) {
+        if (env_visual)  return (text_editor = env_visual);
+        if (env_editor)  return (text_editor = env_editor);
+        else if (!::system("which nano >/dev/null 2>&1")) return (text_editor = "nano");
+        else if (!::system("which vi >/dev/null 2>&1"))   return (text_editor = "vi");
+        else return nullptr;
+    }
+    else {
+        return text_editor;
+    }
+}
+
+
 [[nodiscard]] inline
 std::string make_repo_url(const strview github_name, const strview repo_name) {
     const std::string url = std::format("https://github.com/{}/{}", github_name, repo_name);
     return url;
 }
+
 
 [[nodiscard]] inline
 std::string repo_from_url(const strview repo_url) {
@@ -293,6 +315,7 @@ std::string repo_from_url(const strview repo_url) {
     else return std::string(repo_part);
 }
 
+
 inline std::optional<std::string> active_github_account() {
     std::string gh_acc = {};
 
@@ -311,11 +334,24 @@ inline std::optional<std::string> active_github_account() {
     return strip_nl(gh_acc);
 }
 
-inline bool internet_is_connected() {
-    int32 status = ::system("ping -c 1 google.com > /dev/null 2>&1");
-    if (status == 0) return true;
-    return false;
+
+// tries Cloudfare(fallbacks to Quad9) DNS at always open port 53
+inline bool internet_is_connected(uint32 timeout_seconds = 2) {
+    char cmd[64];
+    // -z for scan only, -w for timeout seconds
+    snprintf(cmd, sizeof(cmd),
+        "nc -zw%u 1.1.1.1 53 2>/dev/null||nc -z-w%u 9.9.9.9 53 2>/dev/null",
+        timeout_seconds, timeout_seconds
+    );
+    return !::system(cmd);
 }
+
+// void check_internet_async(std::function<void(bool)> callback) {
+    // std::thread([callback]() {
+        // int result = ::system("nc -zw1 1.1.1.1 53 > /dev/null 2>&1");
+        // callback(result == 0);
+    // }).detach();
+// }
 
 
 NAMESPACE_END(cm)

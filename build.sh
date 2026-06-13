@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 debug_bin='./build/linux/x86_64/debug/dotty'
 release_bin='./build/linux/x86_64/release/dotty'

@@ -10,6 +10,7 @@
 #include <sstream>
 #include <concepts>
 #include <utility>
+#include <thread>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
