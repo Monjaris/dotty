@@ -80,6 +80,7 @@ template <bool no_ansi_esc_seq=true, class T>
 inline T& prompt(T& lval) {
     return prompt("", lval);
 }
+
 // for arithmetic values
 template <arithmetic T, class String>
 requires std::same_as<String, const char*>
@@ -90,12 +91,13 @@ inline void prompt_number(const String prompt, T& number, bool no_ansi_esc_seq =
     }
     else {
         char* read_number = readline(prompt);
-        if (!read_number) return;
+        if (!read_number || read_number[0]=='\0') return;
 
         try {
             number = std::stold(read_number);
         } catch (const std::exception& e) {
-            std::cin >> number;
+            cm::print("\n");
+            return;
         }
 
         free(read_number);

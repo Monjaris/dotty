@@ -110,14 +110,14 @@ int32 CmdLine::setup()
         "Profile related commands", true, {0,0}, {1, 1}
     );
     //
-        SubCmd* ssc_list = newSubCmd(sc_profile_, {"list", "l", "/"},
+        SubCmd* ssc_list = newSubCmd(sc_profile_, {"list", "l"},
             BIND(do_p_list(impl->v.list_properties)),
             "List all existing profiles", true, {0,1}, {0,0}
         ); ssc_list
             ->add_option("properties", impl->v.list_properties, "List profiles and opted properties")->default_val("name,url")
         ;
     //
-        SubCmd* ssc_new = newSubCmd(sc_profile_, {"new", "n", "+"},
+        SubCmd* ssc_new = newSubCmd(sc_profile_, {"new", "n"},
             BIND(do_p_new(impl->v.new_prof_name, impl->v.new_repo_name, impl->v.new_repo_pub, impl->v.new_commit_msg)),
             "Create a new profile", true, {3,4}, {0,0}
         );
@@ -127,14 +127,14 @@ int32 CmdLine::setup()
             ssc_new->add_flag("--public", impl->v.new_repo_pub, "New repo's publicity status");
         ;
     //
-        SubCmd* ssc_delete = newSubCmd(sc_profile_, {"delete", "d", "-"},
+        SubCmd* ssc_delete = newSubCmd(sc_profile_, {"delete", "d"},
             BIND(do_p_delete(impl->v.delete_profile)),
             "Delete a profile", true, {1,1}, {0,0}
         ); ssc_delete
             ->add_option("profile", impl->v.delete_profile, "Name of the profile to delete")->required()
         ;
     //
-        SubCmd* ssc_switch = newSubCmd(sc_profile_, {"switch", "s", "="},
+        SubCmd* ssc_switch = newSubCmd(sc_profile_, {"switch", "s"},
             BIND(do_p_switch(impl->v.switch_profile)),
             "Switch to another profile", true, {1,1}, {0,0}
         ); ssc_switch
