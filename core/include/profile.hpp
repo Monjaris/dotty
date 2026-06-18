@@ -4,17 +4,18 @@
 struct SrcDest { fs::path src, dest; };
 
 struct Profile {
+    static COMPTIME_STR NOT = "[NOT-PROFILE]";
+
     std::string name;
-    std::string github_host;
-    std::string repo_name;
-    bool is_external = false;
+    std::string repo_url;
+    bool is_pub = false;  // repo visibility is public or not
+    bool is_ext = false;  // the profile repo is owned by user or not
 
     Profile(
-        const std::string& name, const std::string& github_name,
-        const std::string& repo_url, bool is_external
+        const std::string& name,
+        const std::string& repo_url,
+        const bool is_public,
+        const bool is_extern
     );
-
-    std::string repoUrl() const;
-    fs::path getConfigPath() const;
 
 };

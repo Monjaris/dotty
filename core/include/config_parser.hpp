@@ -273,6 +273,7 @@ struct ConfigParser {
 
     Report parseMain()
     {
+        idx = 0;
         copy_files.reserve(32);
         copy_dirs.reserve(32);
         link_files.reserve(32);

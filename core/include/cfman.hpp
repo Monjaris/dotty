@@ -22,26 +22,21 @@ struct Clr {
 
 NAMESPACE_END(cm)
 
-inline const char* f() {
-    return ".config";
-}
-
 class Cfman
 {
 public:
-    static COMPTIME_STR NO_PROFILE = "[no-profile]";
     static constexpr bool COLORS = true;
 
     std::vector<Profile> m_profiles;
 
-    const fs::path HOME = cm::userHomePath(true, "$HOME is empty");
+    const fs::path HOME = cm::os::userHomePath();  // this throws on fail, nice thing
     fs::path config_d = HOME/cm::os::get_config_d()/"dotty";
     fs::path data_d = HOME/".local/share/dotty";
 
     const char* const master_src = ".dotty.toml";
     const char* const config_src = "config";
     const char* const data_cfgref = ".dotty.d";
-    Profile current_profile = Profile{NO_PROFILE, "", "", false};
+    Profile m_current_profile = Profile{Profile::NOT, "", false, false};
 
     std::vector<SrcDest> files_to_copy = {};
     std::vector<SrcDest> files_to_link = {};
@@ -86,7 +81,7 @@ public:
     std::string activeProf();
     Report prerequisite(strview init_prof);
     Report newProfile(const std::string& name, const std::string& github_name,
-        const std::string& repo_name, const std::string& repo_visibility,
+        const std::string& repo_name, bool is_public,
         bool is_external, const char* const initial_commit_message
     );
     Report deleteProfile(const strview profile_name);
@@ -94,7 +89,8 @@ public:
     Res listProfiles(bool name, bool repo, bool url, bool gh);
     Report cleanConfigs(bool config, bool storage);
     bool detectPreinitConfig();
-    void load(bool optimistic = false);
+    Report reloadConfig();
+    void load(bool first_load);
     std::array<std::vector<SrcDest>, 4> systemToRepo();
     void repoToSystem();
 };

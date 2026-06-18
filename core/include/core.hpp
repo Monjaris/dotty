@@ -39,14 +39,14 @@ void debug(Args... args) {
 }
 
 
-// uses std::cin or readline()
+// uses std::cin or ::readline()
 template <bool no_ansi_esc_seq=true, class T>
 inline T& prompt(const char* prompt, T& lval) {
     // Read input relevantly
     if constexpr (std::is_same_v<char, T> || std::is_convertible_v<char, T>) {
         if (no_ansi_esc_seq) {
             print(prompt);
-            char* raw = readline(prompt);
+            char* raw = rl::readline(prompt);
             if (raw) {
                 lval = raw[0];
                 free(raw);
@@ -60,7 +60,7 @@ inline T& prompt(const char* prompt, T& lval) {
     else
     {
         if constexpr (no_ansi_esc_seq) {
-            char* raw = readline(prompt);
+            char* raw = rl::readline(prompt);
             if (raw) {
                 lval = raw;
                 free(raw);
@@ -90,7 +90,7 @@ inline void prompt_number(const String prompt, T& number, bool no_ansi_esc_seq =
         std::cin >> number;
     }
     else {
-        char* read_number = readline(prompt);
+        char* read_number = rl::readline(prompt);
         if (!read_number || read_number[0]=='\0') return;
 
         try {
@@ -110,7 +110,7 @@ inline bool ask_confirm(const strview message, bool default_yes = true) {
     const char* post = default_yes?(" (Y/n): "):(" (y/N): ");
     std::string ask_msg = std::string(message).append(post);
 
-    char* inp = ::readline(ask_msg.c_str());
+    char* inp = rl::readline(ask_msg.c_str());
     if (!inp) return(default_yes);
 
     // pass ownership and free
@@ -148,6 +148,11 @@ bool is_any_of(const T val, std::initializer_list<T> list) {
 
 inline std::string concats(const char* base, const char* append) {
     return std::string(base).append(append);
+}
+
+// simply, adds slash between two strings and returns
+inline fs::path cat_path(const fs::path& parent, const fs::path& child) {
+    return parent / child;
 }
 
 [[nodiscard]] inline std::string strip_nl(std::string input) {
@@ -189,6 +194,90 @@ inline bool prefix_strip(const std::string& str, const std::string& prefix, std:
     return true;
 }
 
+
+
+namespace os
+{
+    // this is set to $PATH at c-runtime
+    extern char** environ;
+
+    // spawn process via posix compliant function
+    inline bool spawn_proc(const char* prog, char* const* args) {
+        pid_t pid;
+        bool succeed = !posix_spawnp(&pid, prog, nullptr, nullptr, args, environ);
+        return succeed;
+    }
+    // wait for process to finish by passing the id of that process
+    inline bool wait_proc(pid_t pid) {
+        int res;
+        waitpid(pid, &res, 0);
+        return res;
+    }
+
+
+    // load $HOME to static constant once and return it
+    inline const char* userHomePath() {
+        static const char* home_path_cache = nullptr;
+        if (home_path_cache != nullptr) return home_path_cache;
+
+        const char* home_env = nullptr;
+        #if defined(DOTTY_GENERIC_UNIX)
+            home_env = ::getenv("HOME");
+        #elif defined(_WIN32)
+            home_env = ::getenv("USERPROFILE");
+        #endif
+    
+        if (home_env == nullptr) {
+            throw std::runtime_error("HOME environment variable is not set!");
+        } else {
+            return (home_path_cache = home_env);
+        }
+    }
+
+
+    // get configuration directory based on the OS
+    inline fs::path get_config_d() {
+        #define NO_PATH "////////////////////////"
+        static fs::path os_config_dir = NO_PATH;
+        // operate once and keep in static storage
+        if (os_config_dir == NO_PATH) {
+            #if defined(DOTTY_FOSS_UNIX)
+                const char* env = ::getenv("XDG_CONFIG_HOME");
+                if (env) return os_config_dir = env;
+                else return os_config_dir = cat_path(userHomePath(), ".config");
+            #elif defined(__APPLE__)
+                return os_config_dir = cat_path(userHomePath(), "Library/Preferences");
+            #elif defined(_WIN32)
+                return os_config_dir = cat_path(userHomePath(), "AppData/Roaming");
+            #else
+                return os_config_dir = cat_path(userHomePath(), ".config");
+            #endif
+        }
+        else return os_config_dir;
+    }
+
+
+    // get system editor with nice fallbacks
+    inline const char* get_txt_editor() {
+        static const char* env_visual = ::getenv("VISUAL");
+        static const char* env_editor = ::getenv("EDITOR");
+        static const char* text_editor = nullptr;
+
+        if (text_editor == nullptr) {
+            if (env_visual)  return (text_editor = env_visual);
+            if (env_editor)  return (text_editor = env_editor);
+            else if (!::system("which nano >" NULLDEV)) return (text_editor = "nano");
+            else if (!::system("which vi >" NULLDEV))   return (text_editor = "vi");
+            else return nullptr;
+        }
+        else {
+            return text_editor;
+        }
+    }
+}
+
+
+
 // create a new file, return false if unsuccessful
 inline bool new_file(const fs::path& path) {
     if (fs::exists(path)) return false;
@@ -210,21 +299,11 @@ inline void copy_directory(const fs::path& src_d, const fs::path& dest_d, bool c
 }
 
 
-// load $HOME to static constant once and return it
-inline const char* userHomePath(bool terminate_on_fail = false, const char* fail_msg="") {
-    static const char* home_path = getenv("HOME");
-    if (home_path == nullptr) {
-        if (terminate_on_fail) terminate(fail_msg);
-        else return nullptr;
-    }
-    return home_path;
-}
-
 // parse file path by converting tilde('~') to $HOME variable
 constexpr inline fs::path parsePathTilde(std::string path) {
     if (!(path[0] == '~')) return path;
     path.erase(0, 1);
-    const char* user_home = userHomePath(true, "User does not have $HOME set");
+    const char* const user_home = ::cm::os::userHomePath();
     path.insert(0, user_home);
     return path;
 }
@@ -267,42 +346,10 @@ inline std::pair<int32, int32> remove_dir_contents_recursive(
     return {removed_c, total_c};
 }
 
-
-namespace os
-{
-    // get system editor with nice fallbacks
-    inline const char* get_txt_editor() {
-        static const char* env_visual = ::getenv("VISUAL");
-        static const char* env_editor = ::getenv("EDITOR");
-        static const char* text_editor = nullptr;
-    
-        if (text_editor == nullptr) {
-            if (env_visual)  return (text_editor = env_visual);
-            if (env_editor)  return (text_editor = env_editor);
-            else if (!::system("which nano >" NULLDEV)) return (text_editor = "nano");
-            else if (!::system("which vi >" NULLDEV))   return (text_editor = "vi");
-            else return nullptr;
-        }
-        else {
-            return text_editor;
-        }
-    }
-
-    // get configuration directory based on the OS
-    inline consteval const char* get_config_d() {
-    #   if defined(__linux__)
-            return "~/.config/";
-    #   elif defined(BSD) && !defined(__APPLE__)
-            return "~/.config/";
-    #   elif defined(__APPLE__)
-            return "~/Library/Preferences";
-    #   elif defined(_WIN32)
-            return "~/AppData/Roaming/";
-    #   else
-            return "~/.config/";
-    #   endif
-    }
-
+// pretty-print file. calls 'bat' (cat alternative)
+inline int32 pprint_file(const std::string& path) {
+    // os::spawn_proc()
+    return 0;
 }
 
 
@@ -312,14 +359,13 @@ std::string make_repo_url(const strview github_name, const strview repo_name) {
     return url;
 }
 
-
 [[nodiscard]] inline
 std::string repo_from_url(const strview repo_url) {
     static constexpr const char* BAD_URL = "[BAD-URL]";
     static constexpr strview prefix = "https://github.com/";
 
     // starts with "https://github.com/"
-    if (repo_url.size()<=prefix.size() || repo_url.substr(0, prefix.size())!=prefix) return BAD_URL;
+    if (repo_url.size()<=prefix.size() || !repo_url.starts_with(prefix)) return BAD_URL;
     strview path = repo_url.substr(prefix.size());
 
     size_t first_slash = path.find('/');
@@ -336,6 +382,23 @@ std::string repo_from_url(const strview repo_url) {
     else return std::string(repo_part);
 }
 
+[[nodiscard]] inline
+std::string gh_host_from_url(const strview repo_url) {
+    static constexpr const char* BAD_URL = "[BAD-URL]";
+    static constexpr strview prefix = "https://github.com/";
+
+    if (repo_url.size() <= prefix.size() || !repo_url.starts_with(prefix)) {
+        return BAD_URL;
+    }
+    strview path = repo_url.substr(prefix.size());
+
+    size_t first_slash = path.find('/');
+    if (first_slash == strview::npos || first_slash == 0) {
+        return BAD_URL;
+    }
+
+    return std::string(path.substr(0, first_slash));
+}
 
 inline std::optional<std::string> active_github_account() {
     std::string gh_acc = {};
@@ -361,7 +424,7 @@ inline bool internet_is_connected(uint32 timeout_seconds = 2) {
     char cmd[64];
     // -z for scan only, -w for timeout seconds
     snprintf(cmd, sizeof(cmd),
-        "nc -zw%u 1.1.1.1 53 2>/dev/null||nc -z-w%u 9.9.9.9 53 2>/dev/null",
+        "nc -zw%u 1.1.1.1 53 2>/dev/null||nc -zw%u 9.9.9.9 53 2>/dev/null",
         timeout_seconds, timeout_seconds
     );
     return ::system(cmd) == 0;
@@ -378,7 +441,24 @@ inline bool internet_is_connected(uint32 timeout_seconds = 2) {
 NAMESPACE_END(cm)
 
 
+struct tern {
+    enum value_t { yes, no, neutr} value;
 
+    tern (value_t ternary_value): value(ternary_value) {}
+
+    bool boolable() const { return (value==yes) || (value==no); }
+
+    operator bool() const {
+        switch (value) {
+            case yes: return true;
+            case no: return false;
+            case neutr: {
+                throw std::logic_error("Can't convert neutral value to bool!");
+            }
+        }
+        std::unreachable();
+    }
+};
 
 // contains error message and an error code
 struct [[nodiscard]] cm::Report {
@@ -399,11 +479,15 @@ struct [[nodiscard]] cm::Report {
         return err;
     }
 
-    // print `msg` and return true if `errc` is bad
-    Report& printOnBad(bool new_line=true) {
-        if (bool(*this)) {
-            cm::print(msg, ((new_line)? "\n":""));
+    void printComplains() {
+        if (!msg.empty()) {
+            cm::print(msg, "\n");
         }
+    }
+
+    // print `msg` and return true if `errc` is bad
+    Report& printOnBad() {
+        if (bool(*this)) this->printComplains();
         return *this;
     }
 
@@ -417,7 +501,7 @@ struct [[nodiscard]] cm::Report {
 
     void terminateOnBad() {
         if (bool(*this)) {
-            cm::terminate("Reported bad behaviour: this->", __func__, "");
+            cm::terminate("Invalid action, terminating!");
         }
     }
 };
@@ -481,3 +565,4 @@ public:
         return std::move(output_buf);
     }
 };
+

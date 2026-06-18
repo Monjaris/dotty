@@ -52,15 +52,16 @@ Profile* Cfman::getProfileByName(const strview prof_name) {
 
 // Get current profile as string
 std::string Cfman::activeProf() {
-    std::string profile_name = current_profile.name;
+    std::string profile_name = m_current_profile.name;
     return profile_name;
 }
 
 
 Report Cfman::prerequisite(strview init_prof) {
     Profile* profile = getProfileByName(activeProf());
+    if (profile == nullptr) return Report::Bad("Profile couldn't be found: {}", activeProf());
 
-    if (dotty.activeProf() == NO_PROFILE) {
+    if (dotty.activeProf() == Profile::NOT) {
         return Report::Bad("Active profile is not set!\n");
     }
 
@@ -77,7 +78,7 @@ Report Cfman::prerequisite(strview init_prof) {
 // Create a folder and register a new profile
 Report Cfman::newProfile(
     const std::string& name, const std::string& github_name,
-    const std::string& repo_name, const std::string& repo_visibility,
+    const std::string& repo_name, bool is_public,
     bool is_external, const char* const initial_commit_message
 ){
     static COMPTIME_STR err = "Can't create profile";
@@ -87,9 +88,17 @@ Report Cfman::newProfile(
     dotty.validateRepoName(repo_name).printOnBad().terminateOnBad();
     if (profileExists(name)) return Report::Bad("{} '{}': Profile already exists.", err, name);
     // create profile directory and files
-    if (!fs::create_directories(config_d/name)) return Report::Bad("Coudln't create configuration directories!");
+    if (!fs::create_directories(config_d/name)) {
+        return Report::Bad(
+            "Couldn't create directories, they probably already exist: '{}'",
+            (config_d/name).string()
+        );
+    }
     if (!cm::new_file(config_d/name/config_src))  return Report::Bad("Coudln't create configuration file!");
 
+    if (!fs::exists(HOME/master_src) && cm::new_file(HOME/master_src)) {
+        cm::debug("Created unexistent master config file!");
+    }
     cm::debug("Created new config file in: ", (config_d/name/"config").string());
 
     // constants
@@ -106,19 +115,28 @@ Report Cfman::newProfile(
         .add("git add .gitkeep")
         .add("git commit -m {}", initial_commit_message)
         .add("gh repo create {} --{} --source={} --remote=origin --push",
-            repo_name, repo_visibility, repo_d.string())
+            repo_name, is_public?"public":"private", repo_d.string())
     .run(" && ", false);
 
     cm::debug("Writing new profile configurations to master config");
     MasterConfigParser master_cfman;
+    if (auto rep_parse = master_cfman.rParse(HOME/master_src)) {
+        rep_parse.printOnBad().terminateOnBad();
+    } else {
+        if (auto rep_eval = master_cfman.rEval()) {
+            rep_eval.printComplains();
+        }
+    }
+
     // add profile to config
     master_cfman.wAddProfile(Profile{
-        name, github_name, repo_name, is_external
+        name, cm::make_repo_url(github_name, repo_name), is_public, is_external
     }).printOnBad();
+
     // save
     master_cfman.wSaveConfig(HOME/master_src).printOnBad();
 
-    load(false);
+    reloadConfig().printComplains();
     return Report::Good();
 }
 
@@ -128,54 +146,80 @@ Report Cfman::deleteProfile(const strview profile_name) {
     if (!profileExists(profile_name)) {
         return Report::Bad("Can't delete '{}', it doesn't exist!", profile_name);
     }
-    // else if (activeProf() == profile_name) {
-        // return Report::Bad("Can't delete active profile! Switch to another profile to delete '{}'", profile_name);
-    // }
 
     MasterConfigParser master_cfman;
+    master_cfman.rParse(HOME/master_src).printOnBad();
+    master_cfman.rEval().printComplains();
+
     if (auto report = master_cfman.wRemoveProfile(profile_name)) {
         report.printOnBad();
-        return Report::Bad("Couldn't delete profile!");
-    }
+        return report.Bad("Couldn't delete profile!");
+    } else {  // save config if removing profile succeeds
+        master_cfman
+            .wSaveConfig(HOME/master_src)
+            .printOnBad()
+            .terminateOnBad();
 
-    return Report::Good();
+        return Report::Good();
+    }
 }
 
 
 
 // Set current dotty profile
 Report Cfman::setActiveProfile(const strview name) {
+    Report report;
+
     if (noProfilesExist()) {
-        return Report::Bad("Can't set active profile: No profiles exist yet!");
+        return report.Bad("Can't set active profile: No profiles exist yet!");
     }
     if (!profileExists(name)) {
-        return Report::Bad("Can't switch to @{}: Profile doesn't exist!", name);
+        return report.Bad("Can't switch to '{}': Profile doesn't exist!", name);
     }
-    if (current_profile.name == name.data()) {
-        // return Report::Bad("profile @{} is already active", name);
-        return Report::Good();
+    if (m_current_profile.name == name.data()) {
+        report.addComplain("profile '{}' is already active", name);
+        return report.Good();
     }
 
     MasterConfigParser master_cfman;
+    master_cfman.rParse(HOME/master_src).printOnBad();
+    master_cfman.rEval().printComplains();
     if (auto report = master_cfman.wActivateProfile(name)) {
         report.printOnBad();
     };
     master_cfman.wSaveConfig(HOME/master_src).printOnBad();
+    // will terminate on problems such as same named profiles
+    master_cfman.rValidateConfig().printOnBad().terminateOnBad();
+    reloadConfig().printComplains();
 
-    return Report::Good();
+    if (auto* found_prof = getProfileByName(name)) {
+        m_current_profile = *found_prof;
+    } else {  // p_prof = nullptr
+        return report.Bad("Couldn't find profile '{}'", name);
+    }
+    return report.Good();
 }
 
 
 Cfman::Res Cfman::listProfiles(bool name, bool repo, bool url, bool gh) {
     for (uint32 i=0;  i < m_profiles.size();  ++i) {
         auto prof = m_profiles[i];
+        // if the current iterated profile is active one
+        bool active = activeProf() == getProfileByName(prof.name)->name;
 
         std::string msg;
-        // TODO: make them switch-case after testing
-        if(name) msg += " | " + prof.name;
-        if(repo) msg += " | " + prof.repo_name;
-        if(url)  msg += " | " + prof.repoUrl();
-        if(gh)   msg += " | " + prof.github_host;
+        // TODO: make them switch-case
+        if (active) {
+            if(name) msg += " | \033[32m" + prof.name + "\033[0m";
+            if(repo) msg += " | \033[34m" + cm::repo_from_url(prof.repo_url) + "\033[0m";
+            if(url)  msg += " | \033[4;36m" + prof.repo_url + "\033[0m";
+            if(gh)   msg += " | \033[38m" + cm::gh_host_from_url(prof.repo_url) + "\033[0m";
+        } else {
+            if(name) msg += " | " + prof.name + "";
+            if(repo) msg += " | " + cm::repo_from_url(prof.repo_url) + "";
+            if(url)  msg += " | \033[4m" + prof.repo_url + "\033[0m";
+            if(gh)   msg += " | " + cm::gh_host_from_url(prof.repo_url) + "";
+        }
 
         cm::print(i+1, ": ", msg ," |\n");
     }
@@ -246,14 +290,43 @@ bool Cfman::detectPreinitConfig() {
 }
 
 
+Report Cfman::reloadConfig() {
+    cm::debug("", __FUNCTION__, "()...");
+
+    cm::debug("Loading master config..\n");
+    std::ifstream master(HOME/master_src);
+    MasterConfigParser mcparser;
+    mcparser.rParse(HOME/master_src).printOnBad();
+    mcparser.rEval().printComplains();
+    mcparser.rValidateConfig().printOnBad();
+
+    // register loaded profiles
+    m_profiles = mcparser.profiles;
+
+    // set active profile based on the config
+    auto it = mcparser.vars.find(MasterConfigParser::P_ACTIVE_PROF);
+    if (it != mcparser.vars.end()) {
+        if (Profile* found_prof = getProfileByName(strview(it->second))) {
+            m_current_profile = *found_prof;
+        } else {
+            cm::print("What even i can do in here?\n");
+        }
+    } else {
+        return Report::Bad("Couldn't find active profile");
+    }
+
+    return Report::Good();
+}
+
 // Load dotty configuration and debug
-void Cfman::load(bool optimistic) {
-    cm::debug("dotty.load()..\n");
+void Cfman::load(bool reg) {
+    cm::debug("", __FUNCTION__, "()...");
+
     std::string prof = activeProf();
     fs::path master_path = HOME/master_src;
 
     // Create needed directories&&files if not exist
-    if (!fs::exists(master_path)) cm::new_file(master_path);
+    if(reg) if (!fs::exists(master_path)) cm::new_file(master_path);
     cm::ensure_directories(config_d);
     cm::ensure_directories(data_d);
     for (auto& profile : m_profiles) {
@@ -262,24 +335,22 @@ void Cfman::load(bool optimistic) {
         cm::ensure_directories(data_d/profile.name/data_cfgref);
     }
 
-    cm::debug("dotty.load() -> Opening master config\n");
+    cm::debug("Loading master config..\n");
     std::ifstream master(master_path);
     MasterConfigParser mcparser;
     mcparser.rParse(master_path).printOnBad();
-    mcparser.rEval();
-    mcparser.rUnwrap().printOnBad();
+    mcparser.rEval().printComplains();
+    mcparser.rValidateConfig().printOnBad();
+
+    // load profiles
     m_profiles = mcparser.profiles;
 
     // set active profile based on the config
-    auto it = mcparser.vars.find("profile.active");
+    auto it = mcparser.vars.find(MasterConfigParser::P_ACTIVE_PROF);
     if (it != mcparser.vars.end()) {
         setActiveProfile(it->second.data()).printOnBad();
-    } else if (!optimistic) cm::terminate("dotty.load: setProfile(it->second): Error!");
-
-    std::string profile = activeProf();
-
-    cm::debug("Loaded dotty.\n\n");
-}  // .load()
+    } else if (!reg) cm::terminate("dotty.load: setProfile(it->second): Error!");
+}
 
 
 // Copy all source files to destination files, pairs defined by a member
@@ -428,4 +499,3 @@ void Cfman::repoToSystem() {
 }
 
 Cfman dotty;
-

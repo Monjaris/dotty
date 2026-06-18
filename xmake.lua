@@ -9,23 +9,21 @@ set_policy("build.progress_style", "multirow")
 -- add_rules("c++.unity_build")
 
 --- TOOLCHAIN
-toolchain("dotty-toolchain")
-    set_kind("standalone")
-    set_toolset("cxx", "g++")
-    -- set_toolset("as",    "clang")
-    set_toolset("as",    "as")
-    -- set_toolset("ar",    "llvm-ar")
-    set_toolset("ar",    "ar")
-    -- set_toolset("ld",    "clang++")
-    set_toolset("ld",    "g++")
-    -- set_toolset("sh",    "clang++")
-    set_toolset("sh",    "g++")
-    -- set_toolset("ex",    "clang++")
-    set_toolset("ex",    "g++")
-    -- set_toolset("strip", "llvm-strip")
-    set_toolset("strip", "strip")
+toolchain("dotty.gnu")
+    set_kind("standalone"); set_toolset("cxx", "g++")
+    set_toolset("as",    "as"); set_toolset("ar",    "ar")
+    set_toolset("ld",    "g++"); set_toolset("sh",    "g++")
+    set_toolset("ex",    "g++"); set_toolset("strip", "strip")
 toolchain_end()
-set_toolchains("dotty-toolchain")
+
+toolchain("dotty.llvm")
+    set_kind("standalone"); set_toolset("cxx", "clang++");
+    set_toolset("as",    "clang"); set_toolset("ar",    "llvm-ar")
+    set_toolset("ld",    "clang++"); set_toolset("sh",    "clang++")
+    set_toolset("ex",    "clang++"); set_toolset("strip", "llvm-strip")
+toolchain_end()
+
+set_toolchains("dotty.gnu")
 
 --- SCRIPT-BEGIN
     if is_mode("debug") then
@@ -43,22 +41,21 @@ set_toolchains("dotty-toolchain")
 
 --- DEPENDENCIES
 add_requires("cli11", {system = true})
-add_requires("tomlplusplus", {system = true})
-add_requires("readline", {system = true})
+add_requires("bat", {system = true})
+
 --- GLOBAL
 set_languages("c++23")
+add_includedirs("include/", "core/include/", "vendor/")
 set_pcxxheader("include/common.hpp")
 
 --- TARGETS
 target("core")
     set_kind("static")
     add_files("core/src/*.cpp")
-    add_includedirs("include/", "core/include/")
-    add_packages("tomlplusplus")
+    add_ldflags("-lreadline")
 
 target("dotty")
     set_kind("binary")
     add_files("src/*.cpp")
-    add_includedirs("include/", "core/include/")
     add_deps("core")
-    add_packages("cli11", "tomlplusplus", "readline")
+    add_packages("cli11")

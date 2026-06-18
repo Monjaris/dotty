@@ -69,7 +69,6 @@ CLI::App* CmdLine::newSubCmd(
 }
 
 
-#pragma GCC diagnostic ignored "-Wunused-variable"
 #define BIND(_fn_name) [this](){return _fn_name;}
 int32 CmdLine::setup()
 {
@@ -147,9 +146,9 @@ int32 CmdLine::setup()
     //
 
     try {
-        impl->cli.parse(impl->argc, impl->argv);
+        APP.parse(impl->argc, impl->argv);
     } catch (const CLI::ParseError& e) {
-        ::exit(impl->cli.exit(e));
+        ::exit(APP.exit(e));
     }
 
     return EXIT_SUCCESS;
@@ -159,25 +158,23 @@ int32 CmdLine::setup()
 
 int32 CmdLine::run()
 {
-    std::string active_p = "<unloaded>";
+    std::string active_p = Profile::NOT;
+    dotty.load(true);
+    active_p = dotty.activeProf();
 
     if (APP.count_all() == 1) {
-        dotty.load(true);
-        active_p = dotty.activeProf();
-
         cm::print(impl->default_msg);
-        if (active_p == dotty.NO_PROFILE) {
+        if (active_p == Profile::NOT) {
             cm::print("Active profile is not set yet!\n");
         } else {
             cm::print("Active-profile: ", "\033[32m", active_p, "\033[0m", "\n");
         }
     }
 
-    dotty.load(true);
 
     for (auto& [sub_cmd, data]  : impl->sub_commands) {
         if (sub_cmd->parsed()) {
-            if (!data.prof_agnostic && (active_p == dotty.NO_PROFILE)) {
+            if (!data.prof_agnostic && (active_p == Profile::NOT)) {
                 cm::terminate("", sub_cmd->get_name(), " command requires an active profile!\n");
             }
             data.action.operator()();

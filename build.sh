@@ -1,10 +1,11 @@
 #!/usr/bin/env sh
 
 set -e
+cd "$(dirname "$0")" || exit 1
 
 debug_bin='./build/linux/x86_64/debug/dotty'
 release_bin='./build/linux/x86_64/release/dotty'
-copy_bin=""
+BIN=""
 
 # portable nproc
 if command -v nproc >/dev/null 2>&1; then
@@ -15,15 +16,15 @@ else
     JOBS=1
 fi
 
-if [ "$1" = "rel" ]; then
-    xmake config --show 2>/dev/null | grep -q mode=release || xmake config -m release
-    copy_bin="$release_bin"
+if [ "$1" = "dev" ]; then
+    xmake config --show 2>/dev/null | grep -q '^mode=debug$' || xmake config -m debug
+    BIN="$debug_bin"
     shift
 else
-    xmake config --show 2>/dev/null | grep -q mode=debug || xmake config -m debug
-    copy_bin="$debug_bin"
+    xmake config --show 2>/dev/null | grep -q '^mode=release$' || xmake config -m release
+    BIN="$release_bin"
 fi
 
-xmake build -j"$JOBS" -v dotty || exit $?
-command cp "$copy_bin" ./dotty
+xmake build -j"$JOBS" -v dotty
+cp "$BIN" ./dotty
 # ./dotty "$@"

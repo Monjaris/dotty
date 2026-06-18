@@ -2,19 +2,21 @@
 #include "config_parser.hpp"
 
 
-// methods with 'r*' are  readonly,
-// whereas 'w*' ones are config writes.
+// methods with 'r*' are config readers,
+// whereas 'w*' ones are config writerss.
 struct MasterConfigParser {
     toml::table m_table;
     std::map<std::string, std::string> vars;
     std::vector<Profile> profiles;
 
-    // Properties of a profile
+    // Property symbol table
     static COMPTIME_STR P_ACTIVE_PROF   = "active-profile";
-    static COMPTIME_STR PP_PROFILE  = "profile";
-    static COMPTIME_STR PP_GH_HOST  = "gh-host";
-    static COMPTIME_STR PP_REPO_URL = "repo-url";
-    static COMPTIME_STR PP_EXTERNAL = "external";
+    static COMPTIME_STR P_PROFILES  = "profile";
+        static COMPTIME_STR PP_NAME     = "name";  // str
+        static COMPTIME_STR PP_REPO_URL = "url";  // str
+        static COMPTIME_STR PP_REPO_PUB = "public";  // bool
+        static COMPTIME_STR PP_EXTERNAL = "external";  // bool
+
 
     Report rParse(const fs::path& path)
     {
@@ -26,33 +28,41 @@ struct MasterConfigParser {
         return Report::Good();
     }
 
-    void rEval()
+    Report rEval()
     {
-        if (auto v = m_table["active"].value<std::string>()) {
-            vars["active-profile"] = *v;
-        }
+        Report rep;
 
-        if (auto* profiles_array = m_table["profiles"].as_table()) {
-            for (auto& [key, value]  : *profiles_array) {
-                auto& prof = *value.as_table();
+        vars[P_ACTIVE_PROF] = m_table[P_ACTIVE_PROF].value_or(Profile::NOT);
 
-                std::string name = std::string(key.str());  // name of the table itself
-                std::string gh   = prof[PP_GH_HOST].value_or("");
-                std::string url  = prof[PP_REPO_URL].value_or("");
-                bool        ext  = prof[PP_EXTERNAL].value_or(false);
+        auto* arr_profiles = m_table[P_PROFILES].as_array();
+        if (!arr_profiles) return rep.Bad("No profiles configuired!");
 
-                if (name.empty() || url.empty() || gh.empty()) {
-                    ;
-                } else {
-                    profiles.emplace_back(name, gh, url, ext);
-                }
+        for (auto& node_profile  : *arr_profiles) {
+            auto* tbl_profile = node_profile.as_table();
+            if (tbl_profile->empty()) {
+                rep.addComplain("Profile table is empty! ignoring..");
+                continue;
             }
+
+            std::string name = tbl_profile->at(PP_NAME).value_or("");
+            std::string url  = tbl_profile->at(PP_REPO_URL).value_or("");
+            tern is_public   = tbl_profile->at(PP_REPO_PUB).value_or(tern::neutr);
+            bool is_extern   = tbl_profile->at(PP_EXTERNAL).value_or(false);
+
+            // `is_public.boolable()` checks for if `is_public` is not `neutr`
+            if (name.empty() || url.empty() || !is_public.boolable()) {
+                rep.addComplain("Profile have missing properties, skipping..");
+                continue;
+            }
+
+            profiles.push_back(Profile{name, url, is_public, is_extern});
         }
+
+        return rep;
     }
 
-    Report rUnwrap() {
+    Report rValidateConfig() {
         Report report;
-
         for (auto& prof_1  : profiles) {
             for (auto& prof_2  : profiles) {
                 if (&prof_1 == &prof_2) continue;  // skip same object
@@ -61,23 +71,35 @@ struct MasterConfigParser {
                 }
             }
         }
-
-        return report? Report::Bad("\nBad config!") : Report::Good();
+        return report? report.Bad("\nBad config!") : Report::Good();
     }
 
-
     Report wAddProfile(const Profile& prof) {
-        auto profile_tb = toml::table{};
-        profile_tb.insert(PP_REPO_URL, prof.repoUrl());
-        profile_tb.insert(PP_EXTERNAL, prof.is_external);
-        profile_tb.insert(PP_GH_HOST, prof.github_host);
+        toml::table entry;
+        entry.insert(PP_NAME, prof.name);
+        entry.insert(PP_REPO_URL, prof.repo_url);
+        entry.insert(PP_REPO_PUB, prof.is_pub);
+        entry.insert(PP_EXTERNAL, prof.is_ext);
 
-        m_table["profiles"].as_table()->insert(prof.name, profile_tb);
+        // Inert profiles array if it doesn't exist yet
+        if (!m_table[P_PROFILES].as_array()) {
+            m_table.insert(P_PROFILES, toml::array{});
+        }
+        // push new profile entry to profiles array
+        m_table[P_PROFILES].as_array()->push_back(entry);
+
         return Report::Good();
     }
 
     Report wRemoveProfile(const strview name) {
-        m_table["profile"].as_table()->erase(name);
+        auto* arr_profiles = m_table[P_PROFILES].as_array();
+
+        for (uint32 i=0;  i < arr_profiles->size();  ++i) {
+            if (arr_profiles->at(i).at_path(PP_NAME) == name) {
+                arr_profiles->erase(arr_profiles->begin() + i);
+            }
+        }
+
         return Report::Good();
     }
 
@@ -87,12 +109,9 @@ struct MasterConfigParser {
     }
 
     Report wSaveConfig(const fs::path& path) {
-        std::ofstream master_cfg(path, std::ios::out | std::ios::trunc);
-        if (master_cfg.is_open()) {
-            master_cfg << m_table;
-        } else {
-            return Report::Bad("Couldn't open master config for writing.");
-        }
+        std::ofstream fo(path, std::ios::out);
+        if (!fo) return Report::Bad("Couldn't open output file: '{}'", path.string());
+        fo << m_table;
         return Report::Good();
     }
 };

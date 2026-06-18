@@ -2,21 +2,17 @@
 .xmake/
 build/
 
-# compile_commands (auto-generated)
-compile_commands.json
-
 # MacOS Cache
 .DS_Store
 
 # Binaries
 *.bin
 *.out
-*.exe
 *.a
 *.o
 *.so
-*.dylib
 
 # Explicit
 dotty
+gen-makefile.sh
 TODO.md

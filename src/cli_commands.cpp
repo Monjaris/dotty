@@ -57,19 +57,12 @@ int32 CmdLine::do_init() {
     cm::debug("URL constructed: ", repo_url);
 
     // ASK REPO-VISIBILITY
-    enum class Vis { DUMMY_NONE, PRIV, PUB };
-    static const Vis visibility_default = Vis::PRIV;
-    int32 vis;
-    cm::prompt_number("Enter repo visibility (1: private, 2: public) [1]: ", vis);
-    if (!cm::is_any_of((Vis)vis, {Vis::PRIV, Vis::PUB})) {
-        cm::print("Invalid input. Defaulting to private.\n");
-        vis = (int32)visibility_default;
-    }
-    std::string visibility; switch ((Vis)vis) {
-        case Vis::PRIV: visibility = "private"; break;
-        case Vis::PUB: visibility = "public"; break;
-        case Vis::DUMMY_NONE: default: std::unreachable();
-    }
+    int32 vis_inp;
+    cm::prompt_number("Enter repo visibility (1: private, 2: public) [1]: ", vis_inp);
+    if (!cm::is_any_of(vis_inp, {1, 2})) {
+        cm::print("Invalid input. Defaulting to private.\n\n");
+        vis_inp = 1;
+    } else cm::print("\n");
 
     // ASK COMMIT-MESSAGE
     static const std::string default_commit_msg = "\"Initial commit of this configuration profile\"";
@@ -78,11 +71,11 @@ int32 CmdLine::do_init() {
     if (commit_msg.empty()) commit_msg = default_commit_msg;
 
     // CREATE NEW PROFILE
-    dotty.newProfile(ini_prof, gh_auth_name, repo_name, visibility, commit_msg.c_str())
+    dotty.newProfile(ini_prof, gh_auth_name, repo_name, bool(vis_inp-1), false, commit_msg.c_str())
         .printOnBad()
         .terminateOnBad();
 
-    cm::print("Repo '", repo_name, "' created as ", visibility, " on GitHub.\n");
+    cm::print("Repo '", repo_name, "' created as ", (vis_inp-1)?("public"):("private"), " on GitHub.\n");
     cm::print("Setting ", ini_prof, " active profile\n");
     dotty.setActiveProfile(ini_prof).printOnBad();
     return EXIT_SUCCESS;
@@ -109,7 +102,7 @@ int32 CmdLine::do_update() {
         cm::print("To update a profile you should first have to create a profile\n");
         return EXIT_FAILURE;
     }
-    if (dotty.activeProf() == dotty.NO_PROFILE) {
+    if (dotty.activeProf() == Profile::NOT) {
         cm::print("To update a profile you should first have to have a active profile set\n");
         return EXIT_FAILURE;
     }
@@ -186,7 +179,7 @@ int32 CmdLine::do_update() {
 
 
 int32 CmdLine::do_push(const char* commit_message) {
-    if (dotty.activeProf() == dotty.NO_PROFILE) {
+    if (dotty.activeProf() == Profile::NOT) {
         cm::print("To push a profile, first you have to set active profile");
         return EXIT_FAILURE;
     }
@@ -218,7 +211,7 @@ int32 CmdLine::do_push(const char* commit_message) {
 
 
 int32 CmdLine::do_pull() {
-    if (dotty.activeProf()==dotty.NO_PROFILE || dotty.noProfilesExist()) {
+    if (dotty.activeProf()==Profile::NOT || dotty.noProfilesExist()) {
         cm::print("Pull operation requires active profile to be set\n");
         return EXIT_FAILURE;
     }
@@ -241,7 +234,7 @@ int32 CmdLine::do_pull() {
     cm::CmdStream {}
         .add("cd $HOME/.cache/dotty/")
         .add("rm -rf ./{}", active_prof->name)
-        .add("git clone {} {}", active_prof->repoUrl(), active_prof->name)
+        .add("git clone {} {}", active_prof->repo_url, active_prof->name)
         .add("rm -rf {}/*", active_config_d)
     .run(" && ", false);
 
@@ -295,13 +288,13 @@ int32 CmdLine::do_config(strview what_cfg, const strview editor_name) {
         }
     };
 
-    dotty.load();
+    dotty.reloadConfig().printComplains();
 
     // default to master if no profiles exist or active profile is not set
     if (dotty.noProfilesExist()) {
         return suggest_edit(dotty.HOME/dotty.master_src);
     }
-    else if (dotty.activeProf() == dotty.NO_PROFILE) {
+    else if (dotty.activeProf() == Profile::NOT) {
         return suggest_edit(dotty.HOME/dotty.master_src);
     }
     else
@@ -374,9 +367,10 @@ int32 CmdLine::do_p_new(
     std::optional<std::string> gh_acc = cm::active_github_account();
     if (!gh_acc.has_value()) cm::terminate("Github login not found");
 
-    dotty.newProfile(name, cm::active_github_account().value(), repo_name, pub?"public":"private", commit_msg.data())
-        .printOnBad()
-        .terminateOnBad();
+    dotty.newProfile(
+        name, cm::active_github_account().value(), repo_name, pub,
+        false, commit_msg.data()
+    ).printOnBad().terminateOnBad();
 
     return EXIT_SUCCESS;
 }
@@ -398,7 +392,7 @@ int32 CmdLine::do_p_delete(const std::string& profile_name) {
 
     // delete github repo
     int32 del_gh_repo =  cm::CmdStream{}
-        .add("gh repo delete {}", dotty.getProfileByName(profile_name)->repo_name)
+        .add("gh repo delete {}", cm::repo_from_url(dotty.getProfileByName(profile_name)->repo_url))
     .run(" && ", false);
 
     if (FAILED del_gh_repo) {

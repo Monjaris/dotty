@@ -14,9 +14,17 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <wait.h>
+#include <spawn.h>
 // 3rd party
-#include <readline/readline.h>
-#include <toml++/toml.hpp>
+#include "toml++/toml.hpp"
+namespace rl {
+#   include "rl/readline.h"
+}
+
+// #define IGNORE_WARN_START(_warning_name) _Pragma("GCC diagnostic push") \
+    _Pragma("GCC diagnostic ignored \"-W" #_warning_name "\"")
+// #define IGNORE_WARN_END() _Pragma("GCC diagnostic pop")
 
 #define NAMESPACE_START(_name) namespace _name {
 #define NAMESPACE_END(_name) }
@@ -24,6 +32,24 @@
 #define CATSTR(_s1, _s2) _s1###_s2
 // use it only for integers, bool(true) is success
 #define FAILED (0)!=
+
+
+#if (defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__))
+#   define DOTTY_FOSS_BSD
+#endif
+
+#if (defined(__linux__) || defined(DOTTY_BSD))
+#   define DOTTY_FOSS_UNIX
+#endif
+
+#if (defined(__APPLE__) || defined(DOTTY_BSD))
+#   define DOTTY_GENERIC_BSD
+#endif
+
+#if (defined(DOTTY_FOSS_UNIX) || defined(__APPLE__))
+#   define DOTTY_GENERIC_UNIX
+#endif
+
 
 #if defined(__linux__) || defined(__APPLE__)
 #       define OS_NEWLN '\n'
