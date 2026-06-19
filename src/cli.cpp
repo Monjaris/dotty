@@ -165,7 +165,7 @@ int32 CmdLine::run()
     if (APP.count_all() == 1) {
         cm::print(impl->default_msg);
         if (active_p == Profile::NOT) {
-            cm::print("Active profile is not set yet!\n");
+            cm::print("Active profile is not set.\n");
         } else {
             cm::print("Active-profile: ", "\033[32m", active_p, "\033[0m", "\n");
         }

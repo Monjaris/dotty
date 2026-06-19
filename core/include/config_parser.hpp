@@ -193,30 +193,30 @@ struct Lexer {
             }
             // Lex COPIER && DIR_COPIER
             else if (get() == '>') {
-                tok.name = lexCopier().str;
+                tok.name = lexDirCopier().str;
                 if (tok.name == LexRes::BAD) {
-                    tok.name = lexDirCopier().str;
+                    tok.name = lexCopier().str;
                     if (tok.name == LexRes::BAD) {
                         continue;
                     } else {
-                        tok.type = Token::DIR_COPIER;
+                        tok.type = Token::COPIER;
                     }
                 } else {
-                    tok.type = Token::COPIER;
+                    tok.type = Token::DIR_COPIER;
                 }
             }
             // Lex LINKER && DIR_LINKER
             else if (get() == '-') {
-                tok.name = lexLinker().str;
+                tok.name = lexDirLinker().str;
                 if (tok.name == LexRes::BAD) {
-                    tok.name = lexDirLinker().str;
+                    tok.name = lexLinker().str;
                     if (tok.name == LexRes::BAD) {
                         continue;
                     } else {
-                        tok.type = Token::DIR_LINKER;
+                        tok.type = Token::LINKER;
                     }
                 } else {
-                    tok.type = Token::LINKER;
+                    tok.type = Token::DIR_LINKER;
                 }
             }
             else if (get() == '@') {

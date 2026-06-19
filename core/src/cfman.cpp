@@ -2,7 +2,10 @@
 
 
 Report Cfman::validateProfileName(const std::string& name) {
-    if (!isalpha(name[0])) {
+    if (name == Profile::NOT) {
+        return Report::Bad("Profile can't be assigned to profile sentinel('{}')", Profile::NOT);
+    }
+    else if (!isalpha(name[0])) {
         return Report::Bad("First character should be an alpha");
     }
     else if (std::string::npos !=
@@ -29,6 +32,7 @@ bool Cfman::noProfilesExist() {
 }
 
 
+DOTTY_ATTR(UNOPTIMIZED)
 bool Cfman::profileExists(const strview profile_name) {
     for (const Profile& prof : m_profiles) {
         if (prof.name == profile_name) {
@@ -94,7 +98,7 @@ Report Cfman::newProfile(
             (config_d/name).string()
         );
     }
-    if (!cm::new_file(config_d/name/config_src))  return Report::Bad("Coudln't create configuration file!");
+    if (!cm::new_file(config_d/name/config_src)) return Report::Bad("Coudln't create configuration file!");
 
     if (!fs::exists(HOME/master_src) && cm::new_file(HOME/master_src)) {
         cm::debug("Created unexistent master config file!");
@@ -133,7 +137,8 @@ Report Cfman::newProfile(
         name, cm::make_repo_url(github_name, repo_name), is_public, is_external
     }).printOnBad();
 
-    // save
+    // activate new profile and save configuration
+    master_cfman.wActivateProfile(name).printOnBad();
     master_cfman.wSaveConfig(HOME/master_src).printOnBad();
 
     reloadConfig().printComplains();
@@ -146,22 +151,35 @@ Report Cfman::deleteProfile(const strview profile_name) {
     if (!profileExists(profile_name)) {
         return Report::Bad("Can't delete '{}', it doesn't exist!", profile_name);
     }
+    auto rep = validateProfileName(profile_name.data());
+    if (rep.error()) {
+        rep.printComplains();
+        return Report::Bad("Couldn't delete profile!");
+    }
+
+    bool is_active = activeProf() == getProfileByName(profile_name)->name;
 
     MasterConfigParser master_cfman;
     master_cfman.rParse(HOME/master_src).printOnBad();
     master_cfman.rEval().printComplains();
 
-    if (auto report = master_cfman.wRemoveProfile(profile_name)) {
-        report.printOnBad();
-        return report.Bad("Couldn't delete profile!");
-    } else {  // save config if removing profile succeeds
+    if (is_active) {
+        master_cfman.wActivateProfile(Profile::NOT)
+            .printOnBad().terminateOnBad();
+    }
+    auto report = master_cfman.wRemoveProfile(profile_name);
+
+    if (report.success()) {
         master_cfman
             .wSaveConfig(HOME/master_src)
             .printOnBad()
             .terminateOnBad();
-
-        return Report::Good();
+    } else {  // failed wRemoveProfile
+        report.printOnBad();
+        return report.Bad("Couldn't delete profile!");
     }
+
+    return Report::Good();
 }
 
 
@@ -169,20 +187,20 @@ Report Cfman::deleteProfile(const strview profile_name) {
 // Set current dotty profile
 Report Cfman::setActiveProfile(const strview name) {
     Report report;
+    MasterConfigParser master_cfman;
 
     if (noProfilesExist()) {
         return report.Bad("Can't set active profile: No profiles exist yet!");
     }
-    if (!profileExists(name)) {
+    else if (name!=Profile::NOT && !profileExists(name)) {
         return report.Bad("Can't switch to '{}': Profile doesn't exist!", name);
     }
-    if (m_current_profile.name == name.data()) {
+    else if (m_current_profile.name == name.data()) {
         report.addComplain("profile '{}' is already active", name);
         return report.Good();
     }
 
-    MasterConfigParser master_cfman;
-    master_cfman.rParse(HOME/master_src).printOnBad();
+    master_cfman.rParse(HOME/master_src).printComplains();
     master_cfman.rEval().printComplains();
     if (auto report = master_cfman.wActivateProfile(name)) {
         report.printOnBad();
@@ -295,21 +313,19 @@ Report Cfman::reloadConfig() {
 
     cm::debug("Loading master config..\n");
     std::ifstream master(HOME/master_src);
-    MasterConfigParser mcparser;
-    mcparser.rParse(HOME/master_src).printOnBad();
-    mcparser.rEval().printComplains();
-    mcparser.rValidateConfig().printOnBad();
+    MasterConfigParser master_cfman;
+    master_cfman.rParse(HOME/master_src).printOnBad();
+    master_cfman.rEval().printComplains();
+    master_cfman.rValidateConfig().printOnBad();
 
     // register loaded profiles
-    m_profiles = mcparser.profiles;
+    m_profiles = master_cfman.profiles;
 
     // set active profile based on the config
-    auto it = mcparser.vars.find(MasterConfigParser::P_ACTIVE_PROF);
-    if (it != mcparser.vars.end()) {
+    auto it = master_cfman.vars.find(MasterConfigParser::P_ACTIVE_PROF);
+    if (it != master_cfman.vars.end() && (it->second == Profile::NOT)) {
         if (Profile* found_prof = getProfileByName(strview(it->second))) {
             m_current_profile = *found_prof;
-        } else {
-            cm::print("What even i can do in here?\n");
         }
     } else {
         return Report::Bad("Couldn't find active profile");

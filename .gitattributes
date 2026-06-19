@@ -1,0 +1,5 @@
+# eol is always '\n'
+* text=auto eol=lf
+
+# every .h is a c file
+*.h linguist-language=C

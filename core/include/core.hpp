@@ -16,6 +16,10 @@ NAMESPACE_START(cm)
 struct Report;
 class CmdStream;
 
+inline void initialize() {
+    std::ios::sync_with_stdio(false);
+    std::cin.tie(nullptr);
+}
 
 // print to stdout via std::ostream
 template <bool _flush=true, class... Args>
@@ -36,6 +40,11 @@ void debug(Args... args) {
     const strview pre = "\033[2m[Debug]\033[0m ";
     const strview post = "\n";
     cm::print(pre, std::forward<Args>(args)..., post);
+}
+
+template <class... Args>
+void perror(std::format_string<Args...>, Args... args) {
+    $IMPLEMENT("impl this function and make sure its the main function for printing errors!");
 }
 
 
@@ -194,24 +203,43 @@ inline bool prefix_strip(const std::string& str, const std::string& prefix, std:
     return true;
 }
 
-
-
 namespace os
 {
-    // this is set to $PATH at c-runtime
-    extern char** environ;
-
-    // spawn process via posix compliant function
-    inline bool spawn_proc(const char* prog, char* const* args) {
-        pid_t pid;
-        bool succeed = !posix_spawnp(&pid, prog, nullptr, nullptr, args, environ);
-        return succeed;
+    // all environment variables of process
+    inline char** get_environ() {
+        return ::environ;  // global unistd variable
     }
+
+    // spawn process(posix compliant), returns -1 on failure
+    inline pid_t spawn_child(const char* prog, char** args) {
+        constexpr usize MAX_ARGS = 64;
+
+        char* argv[MAX_ARGS];
+        argv[0] = const_cast<char*>(prog);
+
+        usize ri = 1;  // read index of args, [0] is prog
+        for (usize wi = 0; wi < MAX_ARGS-1-1; ++wi) {
+            if (args[wi] == nullptr) break;
+            argv[ri++] = args[wi];
+        }
+        argv[ri] = nullptr;
+
+        pid_t pid;
+        uint32 status = posix_spawnp(
+            &pid, prog, nullptr, nullptr,
+            argv,
+            get_environ()
+        );
+        return (status==0)? pid : -1;
+    }
+
     // wait for process to finish by passing the id of that process
     inline bool wait_proc(pid_t pid) {
-        int res;
-        waitpid(pid, &res, 0);
-        return res;
+        int32 status;
+        if (waitpid(pid, &status, 0) == -1) {
+            return false;
+        }
+        return (WIFEXITED(status) && WEXITSTATUS(status)) == 0;
     }
 
 
@@ -264,8 +292,8 @@ namespace os
         static const char* text_editor = nullptr;
 
         if (text_editor == nullptr) {
-            if (env_visual)  return (text_editor = env_visual);
             if (env_editor)  return (text_editor = env_editor);
+            if (env_visual)  return (text_editor = env_visual);
             else if (!::system("which nano >" NULLDEV)) return (text_editor = "nano");
             else if (!::system("which vi >" NULLDEV))   return (text_editor = "vi");
             else return nullptr;
@@ -346,10 +374,18 @@ inline std::pair<int32, int32> remove_dir_contents_recursive(
     return {removed_c, total_c};
 }
 
-// pretty-print file. calls 'bat' (cat alternative)
-inline int32 pprint_file(const std::string& path) {
-    // os::spawn_proc()
-    return 0;
+
+COMPTIME_STR PPRINTER = "bat";
+// pretty-print file, calls 'bat' (cat alternative)
+inline bool pprint_file(const char* const fpath) {
+    char* argv[] = {const_cast<char*>(fpath)};
+    pid_t pid = os::spawn_child(PPRINTER, argv);
+    if (pid == -1) return false;
+    return os::wait_proc(pid);
+}
+// overload for const path reference
+inline bool pprint_file(const fs::path& fpath) {
+    return pprint_file(fpath.c_str());
 }
 
 
@@ -475,9 +511,11 @@ struct [[nodiscard]] cm::Report {
         return Report {true, std::format(err_msg, std::forward<FmtArgs>(err_msg_args)...)};
     }
 
-    constexpr inline operator bool () const {
-        return err;
-    }
+    constexpr explicit inline
+        operator bool () const { return err; }
+    bool success() { return !(bool)*this; }
+    bool error()   { return (bool)*this; }
+
 
     void printComplains() {
         if (!msg.empty()) {
@@ -487,7 +525,7 @@ struct [[nodiscard]] cm::Report {
 
     // print `msg` and return true if `errc` is bad
     Report& printOnBad() {
-        if (bool(*this)) this->printComplains();
+        if (this->error()) this->printComplains();
         return *this;
     }
 
@@ -500,7 +538,7 @@ struct [[nodiscard]] cm::Report {
     }
 
     void terminateOnBad() {
-        if (bool(*this)) {
+        if (this->error()) {
             cm::terminate("Invalid action, terminating!");
         }
     }

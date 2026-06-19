@@ -22,9 +22,9 @@ namespace rl {
 #   include "rl/readline.h"
 }
 
-// #define IGNORE_WARN_START(_warning_name) _Pragma("GCC diagnostic push") \
-    _Pragma("GCC diagnostic ignored \"-W" #_warning_name "\"")
-// #define IGNORE_WARN_END() _Pragma("GCC diagnostic pop")
+#define IGNORE(_comment)
+#define DOTTY_ATTR(_attribute) IGNORE(DOTTY##_attribute)
+#define UNOPTIMIZED "UNOPTIMIZED"
 
 #define NAMESPACE_START(_name) namespace _name {
 #define NAMESPACE_END(_name) }

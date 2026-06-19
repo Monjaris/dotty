@@ -7,28 +7,28 @@ VV=@
 endif
 
 CCACHE=/usr/bin/ccache
-CU=/usr/bin/clang
 GC=/usr/bin/go
-AS=/usr/bin/gcc
-CC=/usr/bin/gcc
-CXX=/usr/bin/g++
-ZC=/usr/bin/zig
 MXX=/usr/bin/g++
 MM=/usr/bin/gcc
-CS=/usr/bin/dotnet
 RC=/usr/bin/rustc
+AS=/usr/bin/gcc
+CU=/usr/bin/clang
+ZC=/usr/bin/zig
+CC=/usr/bin/gcc
+CXX=/usr/bin/g++
+CS=/usr/bin/dotnet
 
-ZCAR=/usr/bin/zig
-AR=/usr/bin/ar
-RCAR=/usr/bin/rustc
-GCAR=/usr/bin/go
-ZCLD=/usr/bin/zig
 LD=/usr/bin/g++
+ZCLD=/usr/bin/zig
 RCLD=/usr/bin/rustc
 GCLD=/usr/bin/go
 CS=/usr/bin/dotnet
-ZCSH=/usr/bin/zig
+AR=/usr/bin/ar
+ZCAR=/usr/bin/zig
+RCAR=/usr/bin/rustc
+GCAR=/usr/bin/go
 SH=/usr/bin/g++
+ZCSH=/usr/bin/zig
 RCSH=/usr/bin/rustc
 
 core_AR=/usr/bin/ar
@@ -44,10 +44,10 @@ core_CXXFLAGS=-O0 -std=c++23 -I build/.objs/core/linux/x86_64/debug/include/cxx 
 core_CXXFLAGS=-O0 -std=c++23 -I build/.objs/core/linux/x86_64/debug/include/cxx -include common.hpp -Iinclude -Icore/include -Ivendor
 core_CXXFLAGS=-O0 -std=c++23 -I build/.objs/core/linux/x86_64/debug/include/cxx -include common.hpp -Iinclude -Icore/include -Ivendor
 core_ARFLAGS=-cr
-dotty_CXXFLAGS=-O0 -std=c++23 -I build/.objs/dotty/linux/x86_64/debug/include/cxx -include common.hpp -Iinclude -Icore/include -Ivendor -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600
-dotty_CXXFLAGS=-O0 -std=c++23 -I build/.objs/dotty/linux/x86_64/debug/include/cxx -include common.hpp -Iinclude -Icore/include -Ivendor -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600
-dotty_CXXFLAGS=-O0 -std=c++23 -I build/.objs/dotty/linux/x86_64/debug/include/cxx -include common.hpp -Iinclude -Icore/include -Ivendor -D_DEFAULT_SOURCE -D_XOPEN_SOURCE=600
-dotty_LDFLAGS=-Lbuild/linux/x86_64/debug -lreadline -lncursesw -lcore
+dotty_CXXFLAGS=-O0 -std=c++23 -I build/.objs/dotty/linux/x86_64/debug/include/cxx -include common.hpp -Iinclude -Icore/include -Ivendor
+dotty_CXXFLAGS=-O0 -std=c++23 -I build/.objs/dotty/linux/x86_64/debug/include/cxx -include common.hpp -Iinclude -Icore/include -Ivendor
+dotty_CXXFLAGS=-O0 -std=c++23 -I build/.objs/dotty/linux/x86_64/debug/include/cxx -include common.hpp -Iinclude -Icore/include -Ivendor
+dotty_LDFLAGS=-Lbuild/linux/x86_64/debug -lcore -lreadline
 
 default:  core dotty
 

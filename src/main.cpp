@@ -2,11 +2,12 @@
 
 int main(int argc, char** argv)
 {
-    CmdLine cmd_line(argc, argv);
+    cm::initialize();
 
+    CmdLine cmd_line(argc, argv);
     cmd_line.setup();
     cmd_line.run();
 
-    $PRINT_UNIMPLEMENTED_FEATURES();
+    if(DEBUG_ON) $PRINT_UNIMPLEMENTED_FEATURES();
     return EXIT_SUCCESS;
 }

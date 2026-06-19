@@ -280,7 +280,10 @@ int32 CmdLine::do_config(strview what_cfg, const strview editor_name) {
                 cmd.add("which {}", editor_name).run("", true);
                 editor = cmd.output();
             } else {
-                editor = cm::os::get_txt_editor();
+                MasterConfigParser mcp;
+                mcp.rParse(dotty.HOME/dotty.master_src).printComplains();
+                mcp.rEval().printComplains();
+                editor = mcp.vars[mcp.P_CFG_EDITOR];
             }
             return cm::CmdStream{}
                 .add("{} {}", editor, cfg_path.string())
@@ -303,12 +306,13 @@ int32 CmdLine::do_config(strview what_cfg, const strview editor_name) {
         if (what_cfg == "") {
             fs::path config_source = dotty.config_d/dotty.activeProf()/dotty.config_src;
             if (!fs::exists(config_source)) {
-                cm::print("Can't find config source: ", config_source, " doesn't exist!\n");
-                return EXIT_FAILURE;
+                cm::new_file(config_source);
             }
-            cm::CmdStream{}
-                .add("bat {}", (dotty.config_d/dotty.activeProf()/dotty.config_src).string())
-                .run(" && ", false);
+            bool pprinted = cm::pprint_file(config_source);
+            if (!pprinted) cm::print(
+                "[Failed to pretty-print file, ", cm::PPRINTER, " probably doesn't exist!]\n"
+            );
+
             return suggest_edit(dotty.config_d/dotty.activeProf()/dotty.config_src);
         }
         // Master option
@@ -318,7 +322,10 @@ int32 CmdLine::do_config(strview what_cfg, const strview editor_name) {
                 return EXIT_FAILURE;
             }
 
-            cm::CmdStream{}.add("bat ~/.dotty").run(" && ", false);
+            bool pprinted = cm::pprint_file(dotty.HOME/dotty.master_src);
+            if (!pprinted) cm::print(
+                "[Failed to pretty-print file, ", cm::PPRINTER, " probably doesn't exist!]\n"
+            );
             return suggest_edit(dotty.HOME/dotty.master_src);
         }
         // Unknown option
@@ -403,7 +410,7 @@ int32 CmdLine::do_p_delete(const std::string& profile_name) {
     }
 
 
-    cm::print("Deleting all profile files and directories!...\n");
+    cm::print("Deleting profile files and directories!...\n");
 
     std::error_code res = {};
     //

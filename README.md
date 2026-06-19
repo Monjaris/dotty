@@ -144,6 +144,8 @@ dotty config # dotty c
 - **Classes/Typedefs**: `PascalCase`
 - **Macros / Constexprs**: `UPPER_SNAKE_CASE`
 
+Also .h is for C headers, C++ headers are *.hpp only.
+
 ### Primary project files
 
 - `src/main.cpp`: Entry point.
