@@ -134,6 +134,7 @@ dotty profile delete terminal-configs # dotty p d terminal-configs
 You can also directly open configuration instead of the manual way
 ```bash
 dotty config # dotty c
+dotty config -e vim # use vim as editor
 ```
 
 
