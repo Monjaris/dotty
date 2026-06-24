@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 
+chmod +x {xmake,xrepo}
+
 set -e
 cd "$(dirname "$0")" || exit 1
 
@@ -20,14 +22,14 @@ else
 fi
 
 if [ "$1" = "dev" ]; then
-    xmake config --show 2>/dev/null | grep -q '^mode=debug$' || xmake config -m debug
+    ./xmake config --show 2>/dev/null | grep -q '^mode=debug$' || ./xmake config -m debug
     BIN="$debug_bin"
     shift
 else
-    xmake config --show 2>/dev/null | grep -q '^mode=release$' || xmake config -m release
+    ./xmake config --show 2>/dev/null | grep -q '^mode=release$' || ./xmake config -m release
     BIN="$release_bin"
 fi
 
-xmake build -j"$JOBS" -v dotty
+./xmake build -j"$JOBS" -v dotty
 cp "$BIN" ./dotty
 # ./dotty "$@"

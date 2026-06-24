@@ -24,11 +24,7 @@ via xmake for decreasing external dependency even more
 
 ### Dotty is available in AUR
 ```bash
-yay -S dotty
-```
-OR, if you use paru:
-```bash
-paru -S dotty
+yay -S dotty # paru: paru -S dotty
 ```
 
 
@@ -106,32 +102,32 @@ To sync your mapped files into the repo locally:
 dotty update # dotty u
 ```
 
-Push repo to github repository
+Push repo to github repository:
 ```bash
 dotty push
 ```
 
-Pull your configs and apply so we can acquire them on another machine or to rollback
+Pull your configs and apply them, so we can acquire them on another machine or to rollback:
 ```bash
 dotty pull
 ```
 
-Dotty supports multiple profiles. to create one:
+Dotty supports multiple profiles. To create one:
 ```bash
 dotty profile new terminal-configs # dotty p n terminal-configs
 ```
 
-You can switch between them
+You can switch between them:
 ```bash
 dotty profile switch main # dotty p s main
 ```
 
-Or you can delete them
+Or you can delete them:
 ```bash
 dotty profile delete terminal-configs # dotty p d terminal-configs
 ```
 
-You can also directly open configuration instead of the manual way
+You can also directly open configuration instead of the manual way:
 ```bash
 dotty config # dotty c
 dotty config -e vim # use vim as editor
