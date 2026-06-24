@@ -48,6 +48,44 @@ void perror(std::format_string<Args...>, Args... args) {
 }
 
 
+void readln(std::string& ibuf) {
+    ibuf.clear();
+    termios term_old;
+
+    auto enable_raw = [](termios& term) {
+        ::tcgetattr(STDIN_FILENO, &term);
+        termios term_new = term;
+        term_new.c_lflag &= ~(ECHO | ICANON);
+        ::tcsetattr(STDIN_FILENO, TCSAFLUSH, &term_new);
+    };
+
+    auto disable_raw = [](termios& term) {
+        tcsetattr(STDIN_FILENO, TCSAFLUSH, &term);
+    };
+
+    enable_raw(term_old);
+
+    char ch;
+    while (::read(STDIN_FILENO, &ch, 1) == 1) {
+        if (ch == '\n' || ch == '\r') break;
+
+        if (ch == '\x1b') {
+            char c;
+            if (::read(STDIN_FILENO, &c, 1) != 1) break;
+
+            if (c == '[') {
+                while (::read(STDIN_FILENO, &c, 1) == 1) {
+                    if (c >= '@' && c <= '~') break;
+                }
+            }
+            continue;
+        }
+        ibuf += ch;
+    }
+
+    disable_raw(term_old);
+}
+
 // uses std::cin or ::readline()
 template <bool no_ansi_esc_seq=true, class T>
 inline T& prompt(const char* prompt, T& lval) {

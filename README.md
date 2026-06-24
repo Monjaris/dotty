@@ -145,7 +145,19 @@ dotty config -e vim # use vim as editor
 - **Classes/Typedefs**: `PascalCase`
 - **Macros / Constexprs**: `UPPER_SNAKE_CASE`
 
-Also .h is for C headers, C++ headers are *.hpp only.
+#### Struct Members
+pub-members: `var` / `m_var` \
+priv-members: `_var` / `_m_var` \
+pub-static-members: `M_var` \
+priv-static-members: `M_var`
+#### Struct Members
+pub-methods: `fooBar` \
+priv-methods: `_fooBar` \
+pub-static-methods: `FooBar` \
+priv-static-methods: `mFooBar`
+#### Misc
+- Also .h is for C headers, C++ headers are *.hpp only.
+
 
 ### Primary project files
 

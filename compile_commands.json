@@ -1,36 +1,46 @@
 [
 {
   "directory": "/home/ziya/dev/main/dotty",
-  "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/core/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-o", "build/.objs/core/linux/x86_64/debug/core/src/master_cfg_parser.cpp.o", "core/src/master_cfg_parser.cpp"],
-  "file": "core/src/master_cfg_parser.cpp"
-},
-{
-  "directory": "/home/ziya/dev/main/dotty",
-  "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/core/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-o", "build/.objs/core/linux/x86_64/debug/core/src/config_parser.cpp.o", "core/src/config_parser.cpp"],
-  "file": "core/src/config_parser.cpp"
-},
-{
-  "directory": "/home/ziya/dev/main/dotty",
-  "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/core/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-o", "build/.objs/core/linux/x86_64/debug/core/src/cfman.cpp.o", "core/src/cfman.cpp"],
+  "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/core/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-Ideps", "-o", "build/.objs/core/linux/x86_64/debug/core/src/cfman.cpp.o", "core/src/cfman.cpp"],
   "file": "core/src/cfman.cpp"
 },
 {
   "directory": "/home/ziya/dev/main/dotty",
-  "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/core/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-o", "build/.objs/core/linux/x86_64/debug/core/src/profile.cpp.o", "core/src/profile.cpp"],
+  "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/core/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-Ideps", "-o", "build/.objs/core/linux/x86_64/debug/core/src/config_parser.cpp.o", "core/src/config_parser.cpp"],
+  "file": "core/src/config_parser.cpp"
+},
+{
+  "directory": "/home/ziya/dev/main/dotty",
+  "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/core/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-Ideps", "-o", "build/.objs/core/linux/x86_64/debug/core/src/master_cfg_parser.cpp.o", "core/src/master_cfg_parser.cpp"],
+  "file": "core/src/master_cfg_parser.cpp"
+},
+{
+  "directory": "/home/ziya/dev/main/dotty",
+  "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/core/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-Ideps", "-o", "build/.objs/core/linux/x86_64/debug/core/src/profile.cpp.o", "core/src/profile.cpp"],
   "file": "core/src/profile.cpp"
 },
 {
   "directory": "/home/ziya/dev/main/dotty",
-  "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/dotty/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-o", "build/.objs/dotty/linux/x86_64/debug/src/main.cpp.o", "src/main.cpp"],
-  "file": "src/main.cpp"
+  "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/input/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-Ideps", "-o", "build/.objs/input/linux/x86_64/debug/tests/raw-input.cpp.o", "tests/raw-input.cpp"],
+  "file": "tests/raw-input.cpp"
 },
 {
   "directory": "/home/ziya/dev/main/dotty",
-  "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/dotty/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-o", "build/.objs/dotty/linux/x86_64/debug/src/cli.cpp.o", "src/cli.cpp"],
+  "arguments": ["/usr/bin/g++", "-c", "-g", "-O0", "-std=c++20", "-I", "build/.objs/raw-input/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-Ideps", "-Ideps/dotline", "-Ideps/dotline/include", "-o", "build/.objs/raw-input/linux/x86_64/debug/deps/dotline/tests/dotline.cpp.o", "deps/dotline/tests/dotline.cpp"],
+  "file": "deps/dotline/tests/dotline.cpp"
+},
+{
+  "directory": "/home/ziya/dev/main/dotty",
+  "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/dotty/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-Ideps", "-o", "build/.objs/dotty/linux/x86_64/debug/src/cli.cpp.o", "src/cli.cpp"],
   "file": "src/cli.cpp"
 },
 {
   "directory": "/home/ziya/dev/main/dotty",
-  "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/dotty/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-o", "build/.objs/dotty/linux/x86_64/debug/src/cli_commands.cpp.o", "src/cli_commands.cpp"],
+  "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/dotty/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-Ideps", "-o", "build/.objs/dotty/linux/x86_64/debug/src/cli_commands.cpp.o", "src/cli_commands.cpp"],
   "file": "src/cli_commands.cpp"
+},
+{
+  "directory": "/home/ziya/dev/main/dotty",
+  "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/dotty/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-Ideps", "-o", "build/.objs/dotty/linux/x86_64/debug/src/main.cpp.o", "src/main.cpp"],
+  "file": "src/main.cpp"
 }]
