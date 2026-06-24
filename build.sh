@@ -1,5 +1,7 @@
 #!/usr/bin/env sh
 
+chmod +x {xmake,xrepo}
+
 set -e
 cd "$(dirname "$0")" || exit 1
 
