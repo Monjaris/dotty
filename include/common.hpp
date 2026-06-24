@@ -19,9 +19,8 @@
 #include <unistd.h>
 // 3rd party
 #include "toml++/toml.hpp"
-namespace rl {
-// #   include "rl/readline.h"
-}
+#include "dotline/dotline.hpp"
+
 
 #define IGNORE(_comment)
 #define DOTTY_ATTR(_attribute) IGNORE(DOTTY##_attribute)

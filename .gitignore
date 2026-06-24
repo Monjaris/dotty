@@ -14,5 +14,4 @@ build/
 
 # Explicit
 dotty
-gen-makefile.sh
 TODO.md

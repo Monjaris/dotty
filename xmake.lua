@@ -8,6 +8,7 @@ add_rules("plugin.compile_commands.autoupdate")
 set_policy("build.progress_style", "multirow")
 -- add_rules("c++.unity_build")
 
+
 --- TOOLCHAIN
 toolchain("dotty.gnu")
     set_kind("standalone"); set_toolset("cxx", "g++")
@@ -45,16 +46,19 @@ add_requires("bat", {system = true})
 
 --- GLOBAL
 set_languages("c++23")
-add_includedirs("include/", "core/include/", "vendor/")
+add_includedirs("include/", "core/include/", "vendor/", "deps/")
 set_pcxxheader("include/common.hpp")
+
+--- TESTS
+target("input") add_files("tests/input.cpp")
 
 --- TARGETS
 target("core")
     set_kind("static")
     add_files("core/src/*.cpp")
-    -- add_ldflags("-lreadline")
 
 target("dotty")
+    before_build(function(target) os.exec("git submodule update --init") end)
     set_kind("binary")
     add_files("src/*.cpp")
     add_deps("core")

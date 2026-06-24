@@ -33,7 +33,7 @@ inline void print(Args&&... args) {
 
 
 template <class... Args>
-void debug(Args... args) {
+inline void debug(Args... args) {
 #if !DEBUG_ON
     return;
 #endif
@@ -43,37 +43,29 @@ void debug(Args... args) {
 }
 
 template <class... Args>
-void perror(std::format_string<Args...>, Args... args) {
+inline void perror(std::format_string<Args...>, Args... args) {
     $IMPLEMENT("impl this function and make sure its the main function for printing errors!");
 }
 
 
-// uses std::cin or ::readline()
-template <bool no_ansi_esc_seq=true, class T>
+// uses std::cin or dotl::read_string()
+template <bool std_line_reader=true, class T>
 inline T& prompt(const char* prompt, T& lval) {
     // Read input relevantly
     if constexpr (std::is_same_v<char, T> || std::is_convertible_v<char, T>) {
-        if (no_ansi_esc_seq || false) {
-            print(prompt);
-            // char* raw = rl::readline(prompt);
-            // if (raw) {
-                // lval = raw[0];
-                // free(raw);
-            // }
+        if (!std_line_reader) {
+            lval = dotl::prompt(prompt).read_string();
             cm::print("\n");
         } else {
-            print(prompt);
+            cm::print(prompt);
             std::cin >> lval;
         }
     }
     else
     {
-        if constexpr (no_ansi_esc_seq || false) {
-            // char* raw = rl::readline(prompt);
-            // if (raw) {
-                // lval = raw;
-                // free(raw);
-            // }
+        if constexpr (!std_line_reader) {
+            dotl::prompt(prompt);
+            std::string in = dotl::read_string().string();
             cm::print("\n");
         }
         else {
@@ -84,32 +76,23 @@ inline T& prompt(const char* prompt, T& lval) {
 
     return lval;
 }
-// overload
-template <bool no_ansi_esc_seq=true, class T>
-inline T& prompt(T& lval) {
-    return prompt("", lval);
-}
 
 // for arithmetic values
-template <arithmetic T, class String>
-requires std::same_as<String, const char*>
-inline void prompt_number(const String prompt, T& number, bool no_ansi_esc_seq = true) {
-    if (!no_ansi_esc_seq || true) {
+template <class Number, class StringType>
+requires std::is_arithmetic_v<Number> && std::same_as<StringType, const char*>
+inline void prompt_number(const StringType prompt, Number& number, bool std_line_reader = true) {
+    if (std_line_reader || true) {
         cm::print(prompt);
         std::cin >> number;
     }
     else {
-        // char* read_number = rl::readline(prompt);
-        // if (!read_number || read_number[0]=='\0') return;
-
-        try {
-            // number = std::stold(read_number);
-        } catch (const std::exception& e) {
-            cm::print("\n");
+        dotl::prompt(prompt);
+        dotl::ParseRes res = dotl::read_string().parse<Number>();
+        if (!res.error()) {
+            number = res.value();
+        } else {
             return;
         }
-
-        // free(read_number);
     }
 }
 
@@ -119,19 +102,14 @@ inline bool ask_confirm(const strview message, bool default_yes = true) {
     const char* post = default_yes?(" (Y/n): "):(" (y/N): ");
     std::string ask_msg = std::string(message).append(post);
 
-    // char* inp = rl::readline(ask_msg.c_str());
-    char* inp;
-    std::string inps;
-    std::getline(std::cin, inps);
-    inp = inps.data();
+    std::string inps = dotl::prompt(message.data()).read_string().string();
+    char* inp = inps.data();
     if (!inp) return(default_yes);
+    // erase trailing nl
+    inps.erase(inps.begin()+inps.size());
 
-    // pass ownership and free
-    std::string polish = (inp[::strcspn(inp, "\n")] = '\0', inp);
-    free(inp);
-
-    if (polish.empty()) return default_yes;
-    if (::tolower(polish[0]) == 'y') return true;
+    if (inps.empty()) return default_yes;
+    if (::tolower(inps[0]) == 'y') return true;
     return(false);
 }
 

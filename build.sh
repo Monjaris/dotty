@@ -3,8 +3,11 @@
 set -e
 cd "$(dirname "$0")" || exit 1
 
-debug_bin='./build/linux/x86_64/debug/dotty'
-release_bin='./build/linux/x86_64/release/dotty'
+# add submodules
+git submodule update --init
+
+debug_bin="./build/linux/x86_64/debug/dotty"
+release_bin="./build/linux/x86_64/release/dotty"
 BIN=""
 
 # portable nproc
