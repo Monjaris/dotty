@@ -26,7 +26,16 @@ toolchain_end()
 
 set_toolchains("dotty.gnu")
 
---- SCRIPT-BEGIN
+
+target("script")
+    set_kind("phony")
+    set_policy("build.fence", true)
+    on_build(function(target)
+        os.exec("git submodule update --init")
+    end)
+target_end()
+
+--- SCRIPT
     if is_mode("debug") then
         set_optimize("none")
         -- set_symbols("debug")
@@ -38,6 +47,7 @@ set_toolchains("dotty.gnu")
         set_strip("all")
     end
 --- SCRIPT-END
+
 
 
 --- DEPENDENCIES
@@ -56,10 +66,10 @@ target("input") add_files("tests/input.cpp")
 target("core")
     set_kind("static")
     add_files("core/src/*.cpp")
+    add_deps("script")
 
 target("dotty")
-    before_build(function(target) os.exec("git submodule update --init") end)
     set_kind("binary")
     add_files("src/*.cpp")
-    add_deps("core")
+    add_deps("core", "script")
     add_packages("cli11")
