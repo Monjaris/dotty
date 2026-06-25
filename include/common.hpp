@@ -17,6 +17,7 @@
 #include <wait.h>
 #include <spawn.h>
 #include <unistd.h>
+#include <fcntl.h>
 // 3rd party
 #include "toml++/toml.hpp"
 #include "dotline/dotline.hpp"

@@ -27,6 +27,7 @@ toolchain_end()
 set_toolchains("dotty.gnu")
 
 
+--- HOOK
 target("script")
     set_kind("phony")
     set_policy("build.fence", true)
@@ -52,7 +53,6 @@ target_end()
 
 --- DEPENDENCIES
 add_requires("cli11", {system = true})
-add_requires("bat", {system = true})
 
 --- GLOBAL
 set_languages("c++23")
@@ -67,9 +67,10 @@ target("core")
     set_kind("static")
     add_files("core/src/*.cpp")
     add_deps("script")
+    add_packages("bat")
 
 target("dotty")
     set_kind("binary")
     add_files("src/*.cpp")
-    add_deps("core", "script")
+    add_deps("core")
     add_packages("cli11")

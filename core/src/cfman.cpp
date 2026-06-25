@@ -334,6 +334,7 @@ Report Cfman::reloadConfig() {
     return Report::Good();
 }
 
+
 // Load dotty configuration and debug
 void Cfman::load(bool reg) {
     cm::debug("", __FUNCTION__, "()...");

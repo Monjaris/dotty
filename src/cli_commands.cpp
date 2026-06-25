@@ -1,7 +1,7 @@
 #include "cli.hpp"
 
 int32 CmdLine::do_init() {
-    if (fs::exists(dotty.HOME/dotty.master_src)) {
+    if (cm::is_file_empty(dotty.HOME/dotty.master_src)) {
         if (!cm::ask_confirm("Master config shouldn't have existed before init!\nWanna delete it?", false)) {
             cm::terminate("You can't run master config preconfiguired!\n");
         }
@@ -16,6 +16,19 @@ int32 CmdLine::do_init() {
         cm::terminate(
             "Your device is not connected to the internet!\n",
             "Github repo initialization requires a wifi connection."
+        );
+    }
+
+    if (!cm::os::in_path("gh")) {
+        cm::terminate(
+            "[Error] core runtime-dependency '", "\033[31mgithub-cli\033[0m", "' doesn't exist!\n",
+            "You can install it with you package manager or by manually"
+        );
+    }
+    if (!cm::os::in_path(cm::PPRINTER)) {
+        cm::print(
+            "[Warning] runtime-dependency '\033[31m", cm::PPRINTER, "\033[0m' doesn't exist!\n",
+            "You can install it with you package manager or by manually"
         );
     }
 

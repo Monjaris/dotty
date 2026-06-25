@@ -192,20 +192,10 @@ namespace os
         return ::environ;  // global unistd variable
     }
 
-    // spawn process(posix compliant), returns -1 on failure
-    inline pid_t spawn_child(const char* prog, char** args) {
-        constexpr usize MAX_ARGS = 64;
 
-        char* argv[MAX_ARGS];
-        argv[0] = const_cast<char*>(prog);
-
-        usize ri = 1;  // read index of args, [0] is prog
-        for (usize wi = 0; wi < MAX_ARGS-1-1; ++wi) {
-            if (args[wi] == nullptr) break;
-            argv[ri++] = args[wi];
-        }
-        argv[ri] = nullptr;
-
+    constexpr uint32 SPAWN_MAX_ARGS = 128;
+    // implements returning prog(prog,{argv,nullptr}) to spawn_child() overloads
+    static pid_t impl_spawn_child(const char* prog, char* argv[]) {
         pid_t pid;
         uint32 status = posix_spawnp(
             &pid, prog, nullptr, nullptr,
@@ -214,16 +204,56 @@ namespace os
         );
         return (status==0)? pid : -1;
     }
+    // spawn process(posix compliant), returns -1 on failure
+    inline pid_t spawn_child(const char* prog, const char* const* args) {
+        char* argv[SPAWN_MAX_ARGS];
+        argv[0] = const_cast<char*>(prog);
 
-    // wait for process to finish by passing the id of that process
-    inline bool wait_proc(pid_t pid) {
-        int32 status;
-        if (waitpid(pid, &status, 0) == -1) {
-            return false;
+        usize ir = 1;  // read index of args, [0] is prog
+        for (usize iw=0;  iw < SPAWN_MAX_ARGS-1-1;  ++iw) {
+            if (args[iw] == nullptr || (ir >= SPAWN_MAX_ARGS-1)) break;
+            argv[ir++] = const_cast<char*>(args[iw]);
         }
-        return (WIFEXITED(status) && WEXITSTATUS(status)) == 0;
+        argv[ir] = nullptr;
+        return impl_spawn_child(prog, argv);
+    }
+    // overload with initializer_list type
+    inline pid_t spawn_child(const char* prog, std::initializer_list<const char*> arg_list) {
+        char* argv[SPAWN_MAX_ARGS];
+        argv[0] = const_cast<char*>(prog);
+
+        usize ir = 1;  // read index of args, [0] is prog
+        for (auto& arg  : arg_list) {
+            if (arg == nullptr || (ir >= SPAWN_MAX_ARGS-1)) break;
+            argv[ir++] = const_cast<char*>(arg);
+        }
+        argv[ir] = nullptr;
+        return impl_spawn_child(prog, argv);
     }
 
+
+    // wait for process to finish by passing the id of that process
+    inline int32 wait_proc(pid_t pid) {
+        int32 status;
+        if (waitpid(pid, &status, 0) == -1) return -1;
+        if (!WIFEXITED(status)) return -1;
+        return WEXITSTATUS(status);
+    }
+
+    inline bool in_path(const char* name) {
+        pid_t pid = ::fork();
+        if (pid == -1) return false;
+        // only child proc runs this branch bcz fork returns two values in both procs
+        if (pid == 0) {
+            int devnull = ::open("/dev/null", O_WRONLY);
+            ::dup2(devnull, STDOUT_FILENO);
+            ::dup2(devnull, STDERR_FILENO);
+            ::close(devnull);
+            spawn_child("which", {name});
+            ::exit(1);  // execlp failed and program reaches here
+        }
+        return wait_proc(pid) == 0;
+    }
 
     // load $HOME to static constant once and return it
     inline const char* userHomePath() {
@@ -318,6 +348,13 @@ constexpr inline fs::path parsePathTilde(std::string path) {
     return path;
 }
 
+inline bool is_file_empty(fs::path file_path) {
+    return fs::file_size(file_path) == 0uz;
+}
+
+inline void empty_file(fs::path file_path) {
+    std::ofstream ef(file_path);
+}
 
 // remove all files/subfolders inside a directory but not itself
 // return a pair of integers: .first(how many item is removed), .second(how many item it had)
