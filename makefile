@@ -7,29 +7,29 @@ VV=@
 endif
 
 CCACHE=/usr/bin/ccache
-CXX=/usr/bin/g++
-AS=/usr/bin/gcc
-CC=/usr/bin/gcc
-MM=/usr/bin/gcc
-CS=/usr/bin/dotnet
 MXX=/usr/bin/g++
-RC=/usr/bin/rustc
 GC=/usr/bin/go
+CC=/usr/bin/gcc
+RC=/usr/bin/rustc
 CU=/usr/bin/clang
-ZC=/usr/bin/zig
-
-RCLD=/usr/bin/rustc
-LD=/usr/bin/g++
-ZCLD=/usr/bin/zig
 CS=/usr/bin/dotnet
-GCLD=/usr/bin/go
+AS=/usr/bin/gcc
+MM=/usr/bin/gcc
+ZC=/usr/bin/zig
+CXX=/usr/bin/g++
+
 RCSH=/usr/bin/rustc
 SH=/usr/bin/g++
 ZCSH=/usr/bin/zig
+CS=/usr/bin/dotnet
 RCAR=/usr/bin/rustc
 AR=/usr/bin/ar
 ZCAR=/usr/bin/zig
 GCAR=/usr/bin/go
+RCLD=/usr/bin/rustc
+LD=/usr/bin/g++
+ZCLD=/usr/bin/zig
+GCLD=/usr/bin/go
 
 input_LD=/usr/bin/g++
 input_CXX=/usr/bin/g++
@@ -57,12 +57,13 @@ dotty_CXXFLAGS=-O0 -std=c++23 -I build/.objs/dotty/linux/x86_64/debug/include/cx
 dotty_CXXFLAGS=-O0 -std=c++23 -I build/.objs/dotty/linux/x86_64/debug/include/cxx -include common.hpp -Iinclude -Icore/include -Ivendor -Ideps
 dotty_LDFLAGS=-Lbuild/linux/x86_64/debug -lcore
 
-default:  input core dotty script
+default:  script input core dotty
 
-all:  input core dotty script
+all:  script input core dotty
 
-.PHONY: default all  input core dotty script
+.PHONY: default all  script input core dotty
 
+script:
 input: build/linux/x86_64/debug/input
 build/linux/x86_64/debug/input: build/.objs/input/linux/x86_64/debug/tests/input.cpp.o
 	@echo linking.debug input
@@ -121,8 +122,9 @@ build/.objs/dotty/linux/x86_64/debug/src/main.cpp.o: src/main.cpp
 	@mkdir -p build/.objs/dotty/linux/x86_64/debug/src
 	$(VV)$(dotty_CXX) -c $(dotty_CXXFLAGS) -o build/.objs/dotty/linux/x86_64/debug/src/main.cpp.o src/main.cpp
 
-script:
-clean:  clean_input clean_core clean_dotty clean_script
+clean:  clean_script clean_input clean_core clean_dotty
+
+clean_script: 
 
 clean_input: 
 	@rm -rf build/linux/x86_64/debug/input
@@ -143,6 +145,4 @@ clean_dotty:  clean_core
 	@rm -rf build/.objs/dotty/linux/x86_64/debug/src/cli.cpp.o
 	@rm -rf build/.objs/dotty/linux/x86_64/debug/src/cli_commands.cpp.o
 	@rm -rf build/.objs/dotty/linux/x86_64/debug/src/main.cpp.o
-
-clean_script: 
 

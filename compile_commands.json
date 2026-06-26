@@ -1,11 +1,6 @@
 [
 {
   "directory": "/home/ziya/dev/main/dotty",
-  "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/input/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-Ideps", "-o", "build/.objs/input/linux/x86_64/debug/tests/input.cpp.o", "tests/input.cpp"],
-  "file": "tests/input.cpp"
-},
-{
-  "directory": "/home/ziya/dev/main/dotty",
   "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/core/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-Ideps", "-o", "build/.objs/core/linux/x86_64/debug/core/src/cfman.cpp.o", "core/src/cfman.cpp"],
   "file": "core/src/cfman.cpp"
 },
@@ -38,4 +33,9 @@
   "directory": "/home/ziya/dev/main/dotty",
   "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/dotty/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-Ideps", "-o", "build/.objs/dotty/linux/x86_64/debug/src/main.cpp.o", "src/main.cpp"],
   "file": "src/main.cpp"
+},
+{
+  "directory": "/home/ziya/dev/main/dotty",
+  "arguments": ["/usr/bin/g++", "-c", "-O0", "-std=c++23", "-I", "build/.objs/input/linux/x86_64/debug/include/cxx", "-include", "common.hpp", "-Iinclude", "-Icore/include", "-Ivendor", "-Ideps", "-o", "build/.objs/input/linux/x86_64/debug/tests/input.cpp.o", "tests/input.cpp"],
+  "file": "tests/input.cpp"
 }]
