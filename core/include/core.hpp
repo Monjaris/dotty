@@ -369,7 +369,7 @@ inline void empty_file(fs::path file_path) {
 }
 
 // remove all files/subfolders inside a directory but not itself
-// return a pair of integers: .first(how many item is removed), .second(how many item it had)
+// return true if remove results correctly(depends on `std::error_code` && `fs::remove_all`)
 inline bool remove_directory_contents(
     fs::path directory, inilist<const char*> exclude={}
 ) {
@@ -381,7 +381,7 @@ inline bool remove_directory_contents(
         }
     }
     cm::debug(remove_result.message());
-    return remove_result.value();
+    return remove_result.value() == 0;
 }
 
 // TODO: Add explanation to this function
