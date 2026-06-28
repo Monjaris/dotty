@@ -4,7 +4,7 @@ set -e
 cd "$(dirname "$0")" || exit 1
 
 # add submodules
-git submodule update --init
+git submodule update --init --remote
 
 verbose=0
 debug_bin="./build/linux/x86_64/debug/dotty"

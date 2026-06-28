@@ -421,7 +421,7 @@ int32 CmdLine::do_p_delete(const std::string& profile_name) {
 
     if (FAILED del_gh_repo) {
         cm::print("Couldn't delete github repo!\n");
-        if (!cm::ask_confirm("Do you want to proceed with removing directories of the profile anyway?")) {
+        if (!cm::ask_confirm("Do you want to proceed with removing directories of it anyway?")) {
             cm::terminate("Could not remove '", profile_name, "'!");
         }
     }

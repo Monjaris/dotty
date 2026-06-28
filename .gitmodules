@@ -1,3 +1,4 @@
 [submodule "deps/dotline"]
 	path = deps/dotline
 	url = https://github.com/Monjaris/dotline
+	branch = main
