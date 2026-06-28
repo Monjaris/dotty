@@ -49,7 +49,7 @@ inline void perror(std::format_string<Args...>, Args... args) {
 
 
 // uses std::cin or dotl::read_string()
-template <bool std_line_reader=true, class T>
+template <bool std_line_reader=false, class T>
 inline T& prompt(const char* prompt, T& lval) {
     // Read input relevantly
     if constexpr (std::is_same_v<char, T> || std::is_convertible_v<char, T>) {
@@ -65,7 +65,7 @@ inline T& prompt(const char* prompt, T& lval) {
     {
         if constexpr (!std_line_reader) {
             dotl::prompt(prompt);
-            std::string in = dotl::read_string().string();
+            lval = dotl::read_string().string();
             cm::print("\n");
         }
         else {
@@ -80,8 +80,8 @@ inline T& prompt(const char* prompt, T& lval) {
 // for arithmetic values
 template <class Number, class StringType>
 requires std::is_arithmetic_v<Number> && std::same_as<StringType, const char*>
-inline void prompt_number(const StringType prompt, Number& number, bool std_line_reader = true) {
-    if (std_line_reader || true) {
+inline void prompt_number(const StringType prompt, Number& number, bool std_line_reader = false) {
+    if (std_line_reader) {
         cm::print(prompt);
         std::cin >> number;
     }
@@ -98,18 +98,15 @@ inline void prompt_number(const StringType prompt, Number& number, bool std_line
 
 
 // utility for YES/NO questions
-inline bool ask_confirm(const strview message, bool default_yes = true) {
+inline bool ask_confirm(const std::string& message, bool default_yes = true) {
     const char* post = default_yes?(" (Y/n): "):(" (y/N): ");
     std::string ask_msg = std::string(message).append(post);
 
-    std::string inps = dotl::prompt(message.data()).read_string().string();
-    char* inp = inps.data();
-    if (!inp) return(default_yes);
-    // erase trailing nl
-    inps.erase(inps.begin()+inps.size());
+    std::string inps = dotl::prompt(ask_msg).read_string().rmFirst('\n');
+    if (inps.empty()) return(default_yes);
 
     if (inps.empty()) return default_yes;
-    if (::tolower(inps[0]) == 'y') return true;
+    if (::tolower((unsigned)inps[0]) == 'y') return true;
     return(false);
 }
 
@@ -128,7 +125,7 @@ inline bool is_even(int32 x) {
 }
 
 template <class T>
-bool is_any_of(const T val, std::initializer_list<T> list) {
+bool is_any_of(const T val, inilist<T> list) {
     for (auto item : list) {
         if (val == item) {
             return true;
@@ -171,7 +168,7 @@ inline bool contains(const Container& cont, const Underlying& element) {
 }
 
 
-inline bool str_has_any_of(const std::string& str, std::initializer_list<char> chars) {
+inline bool str_has_any_of(const std::string& str, inilist<char> chars) {
     for (char c : chars) {
         if (str.contains(c)) return true;
     }
@@ -192,8 +189,23 @@ namespace os
         return ::environ;  // global unistd variable
     }
 
+    constexpr uint32 EXEC_MAX_ARGS = 128;
 
-    constexpr uint32 SPAWN_MAX_ARGS = 128;
+    // replaces current process with given program and it's arguments
+    inline bool exec(const char* program, inilist<const char*> args) {
+        char* argv[EXEC_MAX_ARGS];
+        argv[0] = const_cast<char*>(program);
+        uint32 iw = 1;
+        for (auto& arg : args) {
+            if (iw > EXEC_MAX_ARGS) break;
+            if (arg == nullptr) break;
+            argv[iw] = const_cast<char*>(arg);
+            ++iw;
+        }
+        argv[iw] = nullptr;
+        return ::execvp(program, argv) != -1;
+    }
+
     // implements returning prog(prog,{argv,nullptr}) to spawn_child() overloads
     static pid_t impl_spawn_child(const char* prog, char* argv[]) {
         pid_t pid;
@@ -206,25 +218,25 @@ namespace os
     }
     // spawn process(posix compliant), returns -1 on failure
     inline pid_t spawn_child(const char* prog, const char* const* args) {
-        char* argv[SPAWN_MAX_ARGS];
+        char* argv[EXEC_MAX_ARGS];
         argv[0] = const_cast<char*>(prog);
 
         usize ir = 1;  // read index of args, [0] is prog
-        for (usize iw=0;  iw < SPAWN_MAX_ARGS-1-1;  ++iw) {
-            if (args[iw] == nullptr || (ir >= SPAWN_MAX_ARGS-1)) break;
+        for (usize iw=0;  iw < EXEC_MAX_ARGS-1-1;  ++iw) {
+            if (args[iw] == nullptr || (ir >= EXEC_MAX_ARGS-1)) break;
             argv[ir++] = const_cast<char*>(args[iw]);
         }
         argv[ir] = nullptr;
         return impl_spawn_child(prog, argv);
     }
     // overload with initializer_list type
-    inline pid_t spawn_child(const char* prog, std::initializer_list<const char*> arg_list) {
-        char* argv[SPAWN_MAX_ARGS];
+    inline pid_t spawn_child(const char* prog, inilist<const char*> arg_list) {
+        char* argv[EXEC_MAX_ARGS];
         argv[0] = const_cast<char*>(prog);
 
         usize ir = 1;  // read index of args, [0] is prog
         for (auto& arg  : arg_list) {
-            if (arg == nullptr || (ir >= SPAWN_MAX_ARGS-1)) break;
+            if (arg == nullptr || (ir >= EXEC_MAX_ARGS-1)) break;
             argv[ir++] = const_cast<char*>(arg);
         }
         argv[ir] = nullptr;
@@ -249,8 +261,8 @@ namespace os
             ::dup2(devnull, STDOUT_FILENO);
             ::dup2(devnull, STDERR_FILENO);
             ::close(devnull);
-            spawn_child("which", {name});
-            ::exit(1);  // execlp failed and program reaches here
+            exec("which", {name});
+            ::exit(1);  // execlp failed and program reaches here so exit child proc
         }
         return wait_proc(pid) == 0;
     }
@@ -359,12 +371,12 @@ inline void empty_file(fs::path file_path) {
 // remove all files/subfolders inside a directory but not itself
 // return a pair of integers: .first(how many item is removed), .second(how many item it had)
 inline bool remove_directory_contents(
-    fs::path directory, std::initializer_list<const char*> exclude={}
+    fs::path directory, inilist<const char*> exclude={}
 ) {
     std::error_code remove_result;
 
     for (auto& item : fs::directory_iterator(directory)) {
-        if (exclude.size() && !cm::contains(exclude, item.path().filename().c_str())) {
+        if (!cm::contains(exclude, item.path().filename().c_str())) {
             fs::remove_all(item, remove_result);
         }
     }
@@ -374,7 +386,7 @@ inline bool remove_directory_contents(
 
 // TODO: Add explanation to this function
 inline std::pair<int32, int32> remove_dir_contents_recursive(
-    fs::path directory, std::initializer_list<const char*> exclude={}
+    fs::path directory, inilist<const char*> exclude={}
 ) {
     uint32 total_c = 0;
     uint32 removed_c = 0;
@@ -397,10 +409,9 @@ inline std::pair<int32, int32> remove_dir_contents_recursive(
 COMPTIME_STR PPRINTER = "bat";
 // pretty-print file, calls 'bat' (cat alternative)
 inline bool pprint_file(const char* const fpath) {
-    char* argv[] = {const_cast<char*>(fpath)};
-    pid_t pid = os::spawn_child(PPRINTER, argv);
+    pid_t pid = os::spawn_child(PPRINTER, {fpath});
     if (pid == -1) return false;
-    return os::wait_proc(pid);
+    return os::wait_proc(pid) != -1;
 }
 // overload for const path reference
 inline bool pprint_file(const fs::path& fpath) {
@@ -516,7 +527,8 @@ struct tern {
 };
 
 // contains error message and an error code
-struct [[nodiscard]] cm::Report {
+struct [[nodiscard]]
+cm::Report {
     bool err = false;
     std::string msg = {};
 
@@ -534,7 +546,7 @@ struct [[nodiscard]] cm::Report {
         operator bool () const { return err; }
     bool success() { return !(bool)*this; }
     bool error()   { return (bool)*this; }
-
+    void mute() {}  // so that nodiscard is explicitly bypassed
 
     void printComplains() {
         if (!msg.empty()) {

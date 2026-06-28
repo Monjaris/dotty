@@ -208,7 +208,7 @@ Report Cfman::setActiveProfile(const strview name) {
     master_cfman.wSaveConfig(HOME/master_src).printOnBad();
     // will terminate on problems such as same named profiles
     master_cfman.rValidateConfig().printOnBad().terminateOnBad();
-    reloadConfig().printComplains();
+    reloadConfig().mute();
 
     if (auto* found_prof = getProfileByName(name)) {
         m_current_profile = *found_prof;
@@ -365,7 +365,7 @@ void Cfman::load(bool reg) {
     // set active profile based on the config
     auto it = mcparser.vars.find(MasterConfigParser::P_ACTIVE_PROF);
     if (it != mcparser.vars.end()) {
-        setActiveProfile(it->second.data()).printOnBad();
+        setActiveProfile(it->second.data()).mute();
     } else if (!reg) cm::terminate("dotty.load: setProfile(it->second): Error!");
 }
 

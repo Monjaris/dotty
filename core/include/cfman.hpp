@@ -1,26 +1,6 @@
 #pragma once
 #include "master_cfg_parser.hpp"
 
-NAMESPACE_START(cm)
-
-struct Clr {
-    static constexpr char* _esc = (char*)"\033[";
-    const char* value;
-    Clr (const char* ansi = "0") {
-        value = ::strcat(::strcat(_esc, value), "m");
-    }
-    operator const char*() { return this->value; }
-};
-
-// inline Clr NORM = Clr{};
-// inline Clr RED = "31";
-// inline Clr GRN = "32";
-// inline Clr YLW = "33";
-// inline Clr BLU = "34";
-// inline Clr MAG = "35";
-// inline Clr CYN = "36";
-
-NAMESPACE_END(cm)
 
 class Cfman
 {

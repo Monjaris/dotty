@@ -7,7 +7,7 @@ struct CmdLine::Impl {
     int argc; char** argv;
 
     const char* const default_msg = {
-        "Dotty: Config/Dotfiles manager\n"
+        "dotty: pass --help to show usage\n"
     };
 
 
@@ -44,7 +44,7 @@ CmdLine::~CmdLine() {delete impl;}
 
 
 CLI::App* CmdLine::newSubCmd(
-    CLI::App* parent, const std::initializer_list<const char*> names, const std::function<int32()>& fn,
+    CLI::App* parent, const inilist<const char*> names, const std::function<int32()>& fn,
     const char* desc, bool profile_agnostic, const int32 (&opt_min_max)[2], const int32 (&sc_min_max)[2]
 ) {
     if (names.size()>3 || names.size()<1) {

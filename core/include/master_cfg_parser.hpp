@@ -65,7 +65,6 @@ struct MasterConfigParser {
     }
 
 
-
     Report rValidateConfig() {
         Report report;
         for (auto& prof_1  : profiles) {
@@ -77,6 +76,21 @@ struct MasterConfigParser {
             }
         }
         return report.error()? report.Bad("\nBad config!") : Report::Good();
+    }
+
+
+    Report wActivateProfile(const strview name) {
+        Report rep;
+        auto pair = m_table.insert_or_assign(P_ACTIVE_PROF, name);
+        if (pair.second == false) rep.addComplain("Active profile was already set.");
+        return rep.Good();
+    }
+
+    Report wSetDefaultEditor(const strview editor) {
+        Report rep;
+        auto pair = m_table.insert_or_assign(P_CFG_EDITOR, editor);
+        if (pair.second == false) rep.addComplain("Default editor was already set.");
+        return rep.Good();
     }
 
     Report wAddProfile(const Profile& prof) {
@@ -110,11 +124,6 @@ struct MasterConfigParser {
             }
         }
 
-        return Report::Good();
-    }
-
-    Report wActivateProfile(const strview name) {
-        m_table.insert_or_assign(P_ACTIVE_PROF, name);
         return Report::Good();
     }
 

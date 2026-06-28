@@ -26,7 +26,7 @@ struct CmdLine
         int32 do_p_switch(const std::string& profile_name);
 
     CLI::App* newSubCmd(
-        CLI::App* parent, std::initializer_list<const char*> names, const std::function<int32()>& fn, const char* desc,
+        CLI::App* parent, inilist<const char*> names, const std::function<int32()>& fn, const char* desc,
         bool profile_agnostic, const int32 (&opt_min_max)[2], const int32 (&sc_min_max)[2]
     );
 

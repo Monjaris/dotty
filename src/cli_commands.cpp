@@ -1,13 +1,17 @@
 #include "cli.hpp"
 
 int32 CmdLine::do_init() {
-    if (cm::is_file_empty(dotty.HOME/dotty.master_src)) {
-        if (!cm::ask_confirm("Master config shouldn't have existed before init!\nWanna delete it?", false)) {
+    if (!cm::is_file_empty(dotty.HOME/dotty.master_src)) {
+        if (!cm::ask_confirm(
+            "You already have initialized dotty once in yout system!\n"
+            "Wanna reset it and continue do initialize it again?",
+            false
+        )) {
             cm::terminate("You can't run master config preconfiguired!\n");
         }
         else {
-            fs::remove(dotty.HOME/dotty.master_src);
-            cm::print("Removed '", dotty.HOME/dotty.master_src, "'\n");
+            cm::empty_file(dotty.HOME/dotty.master_src);
+            cm::print("Resetted '", dotty.HOME/dotty.master_src, "'\n");
         }
     }
 
@@ -22,7 +26,7 @@ int32 CmdLine::do_init() {
     if (!cm::os::in_path("gh")) {
         cm::terminate(
             "[Error] core runtime-dependency '", "\033[31mgithub-cli\033[0m", "' doesn't exist!\n",
-            "You can install it with you package manager or by manually"
+            "You can probably install it with you package manager"
         );
     }
     if (!cm::os::in_path(cm::PPRINTER)) {
